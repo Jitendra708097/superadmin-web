@@ -223,7 +223,7 @@ export default function CreateOrgModal({ open, onClose }) {
           {/* Info box */}
           <div className="bg-[#00d4ff]/5 border border-[#00d4ff]/20 rounded-md px-4 py-3 mb-6">
             <p className="text-[#00d4ff] text-[11px] font-sans leading-relaxed">
-              ℹ The admin will receive a welcome email with their temporary password
+              The admin will receive a welcome email with their temporary password
               and a link to the org admin portal. A 14-day trial starts immediately.
             </p>
           </div>
