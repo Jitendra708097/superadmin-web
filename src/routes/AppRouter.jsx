@@ -47,9 +47,9 @@ export default function AppRouter() {
         <Route
           path="/"
           element={
-            // <ProtectedRoute>
+            <ProtectedRoute>
               <AppLayout />
-          //  </ProtectedRoute>
+            </ProtectedRoute>
           }
         >
           <Route index element={<Navigate to="/dashboard" replace />} />

@@ -472,7 +472,7 @@ export default function ImpersonationPage() {
                 <Select.Option key={admin.id} value={admin.id}>
                   <div className="py-0.5">
                     <div className="text-xs text-[#e8e8f0]">
-                      {admin.first_name} {admin.last_name}
+                      {admin.name}
                     </div>
                     <div className="text-[10px] text-[#6b6b8a] font-['JetBrains_Mono']">
                       {admin.email}

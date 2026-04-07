@@ -81,7 +81,7 @@ axiosInstance.interceptors.response.use(
 
       try {
         const response = await axios.post(
-          `${BASE_URL}/api/v1/auth/superadmin/refresh`,
+          `${BASE_URL}/api/v1/superadmin/auth/refresh`,
           { refreshToken },
           { headers: { 'Content-Type': 'application/json' } }
         );
