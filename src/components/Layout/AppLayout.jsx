@@ -6,18 +6,18 @@
  */
 
 import { Outlet, useLocation } from 'react-router-dom';
-import Sidebar     from './Sidebar.jsx';
-import Header      from './Header.jsx';
+import Sidebar from './Sidebar.jsx';
+import Header from './Header.jsx';
 import AlertBanner from './AlertBanner.jsx';
 
 const PAGE_TITLES = {
-  '/dashboard':     'Platform Control',
+  '/dashboard': 'Platform Control',
   '/organisations': 'Organisations',
-  '/revenue':       'Revenue',
+  '/revenue': 'Billing',
   '/impersonation': 'Impersonation',
-  '/audit-logs':    'Audit Logs',
-  '/health':        'Platform Health',
-  '/analytics':     'Analytics',
+  '/audit-logs': 'Audit Logs',
+  '/health': 'Platform Health',
+  '/analytics': 'Analytics',
   '/feature-flags': 'Feature Flags',
 };
 
@@ -27,15 +27,12 @@ export default function AppLayout() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#080810]">
-      {/* Sidebar */}
       <Sidebar />
 
-      {/* Main */}
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         <Header title={title} />
         <AlertBanner />
 
-        {/* Page content */}
         <main className="flex-1 overflow-y-auto overflow-x-hidden">
           <div className="min-h-full p-6">
             <Outlet />
