@@ -5,6 +5,7 @@
  */
 
 import { useNavigate } from 'react-router-dom';
+import Skeleton from '@components/common/Skeleton.jsx';
 import PlanBadge    from '@components/common/PlanBadge.jsx';
 import MonoValue    from '@components/common/MonoValue.jsx';
 import { formatTimeAgo } from '@utils/formatters.js';
@@ -20,11 +21,7 @@ export default function RecentSignups({ signups = [], isLoading }) {
       </div>
 
       {isLoading ? (
-        <div className="space-y-3">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="h-10 bg-[#161625] rounded animate-pulse" />
-          ))}
-        </div>
+        <Skeleton active paragraph={{ rows: 5 }} avatar={{ size: 28 }} />
       ) : signups.length === 0 ? (
         <p className="text-[#6b6b8a] text-xs font-sans text-center py-6">No signups yet</p>
       ) : (

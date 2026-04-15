@@ -5,6 +5,7 @@
  */
 
 import { useNavigate } from 'react-router-dom';
+import Skeleton from '@components/common/Skeleton.jsx';
 import { formatTimeAgo } from '@utils/formatters.js';
 
 const ALERT_TYPE_CONFIG = {
@@ -39,11 +40,7 @@ export default function AlertsFeed({ alerts = [], isLoading }) {
       </div>
 
       {isLoading ? (
-        <div className="space-y-2">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-10 bg-[#161625] rounded animate-pulse" />
-          ))}
-        </div>
+        <Skeleton active paragraph={{ rows: 3 }} />
       ) : alerts.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-8 text-center">
           <div className="text-[#00ff88] text-2xl mb-2">✓</div>

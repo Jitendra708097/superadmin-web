@@ -2,12 +2,25 @@
  * @module PlatformStats
  * @description Top 6 stat cards for the mission control dashboard.
  *              Total Orgs, Active, Employees, Checked In, MRR, New MTD.
+ *              Shows skeleton loading while data fetches.
  */
 
 import StatCard from '@components/common/StatCard.jsx';
+import Skeleton from '@components/common/Skeleton.jsx';
 import { formatNumber, formatMRR } from '@utils/formatters.js';
 
 export default function PlatformStats({ stats = {}, isLoading }) {
+  // Show skeleton during loading
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3 mb-6">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <Skeleton key={i} active paragraph={{ rows: 2 }} avatar={{ size: 32 }} />
+        ))}
+      </div>
+    );
+  }
+
   const cards = [
     {
       label:       'Total Orgs',

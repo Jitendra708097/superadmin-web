@@ -5,6 +5,7 @@
  */
 
 import DarkLineChart from '@components/charts/DarkLineChart.jsx';
+import Skeleton from '@components/common/Skeleton.jsx';
 import { formatMRR } from '@utils/formatters.js';
 import { COLORS } from '@theme/colors.js';
 
@@ -16,7 +17,7 @@ export default function RevenueChart({ data = [], isLoading }) {
           <h3 className="text-[#e8e8f0] text-sm font-sans font-medium">MRR Trend</h3>
           <p className="text-[#6b6b8a] text-xs">Last 6 months</p>
         </div>
-        {data.length > 0 && (
+        {!isLoading && data.length > 0 && (
           <span className="font-['JetBrains_Mono'] text-base text-[#ffaa00] font-bold">
             {formatMRR(data[data.length - 1]?.mrr || 0)}
           </span>
@@ -24,9 +25,7 @@ export default function RevenueChart({ data = [], isLoading }) {
       </div>
 
       {isLoading ? (
-        <div className="h-[220px] flex items-center justify-center">
-          <div className="w-5 h-5 border-2 border-cyan border-t-transparent rounded-full animate-spin" />
-        </div>
+        <Skeleton active paragraph={{ rows: 8 }} style={{ height: 220 }} />
       ) : (
         <DarkLineChart
           data={data}

@@ -1,0 +1,163 @@
+/**
+ * @file Skeleton.css
+ * @description Dark theme skeleton animations for SuperAdmin portal
+ * Matches design system color scheme (#161625 elevated, #1e1e35 border)
+ */
+
+.skeleton-super-admin {
+  /* Dark theme shimmer animation */
+  --skeleton-gradient: linear-gradient(
+    90deg,
+    #1e1e35 0%,
+    #2a2a4a 50%,
+    #1e1e35 100%
+  );
+  --skeleton-background-size: 200% 100%;
+  --skeleton-duration: 1.5s;
+  --skeleton-timing: ease-in-out infinite;
+
+  background: var(--skeleton-gradient);
+  background-size: var(--skeleton-background-size);
+  animation: shimmer-dark var(--skeleton-duration) var(--skeleton-timing);
+}
+
+@keyframes shimmer-dark {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+/* Reduce motion support (Accessibility) */
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-super-admin {
+    animation: none;
+    background: #1e1e35;
+  }
+}
+
+/* Title skeleton */
+.skeleton-super-admin :global(.ant-skeleton-title) {
+  margin-bottom: 16px;
+  height: 24px;
+  background: #2a2a3e;
+}
+
+/* Paragraph skeleton lines */
+.skeleton-super-admin :global(.ant-skeleton-paragraph) > li {
+  list-style: none;
+  height: 16px;
+  margin-bottom: 8px;
+  background: #2a2a3e;
+}
+
+.skeleton-super-admin :global(.ant-skeleton-paragraph) > li:last-child {
+  margin-bottom: 0;
+}
+
+/* Avatar skeleton */
+.skeleton-super-admin :global(.ant-skeleton-avatar) {
+  height: 40px;
+  width: 40px;
+  min-width: 40px;
+  border-radius: 50%;
+  background: #2a2a3e;
+  margin-right: 12px;
+}
+
+.skeleton-super-admin :global(.ant-skeleton-avatar.ant-skeleton-avatar-lg) {
+  height: 48px;
+  width: 48px;
+  min-width: 48px;
+}
+
+/* List variant (avatar + lines) */
+.skeleton-list {
+  display: flex;
+  padding: 12px;
+}
+
+.skeleton-list :global(.ant-skeleton-content) {
+  flex: 1;
+}
+
+/* Card variant (full width with padding) */
+.skeleton-card {
+  padding: 16px;
+  background: #161625;
+  border-radius: 8px;
+  border: 1px solid #1e1e35;
+}
+
+.skeleton-card :global(.ant-skeleton-title) {
+  width: 60%;
+}
+
+/* Table variant (multiple rows with dividers) */
+.skeleton-table {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0;
+}
+
+.skeleton-table :global(.ant-skeleton) {
+  padding: 12px;
+  background: #161625;
+  border: 1px solid #1e1e35;
+  border-radius: 6px;
+}
+
+/* Button skeleton */
+.skeleton-super-admin :global(.ant-skeleton-button) {
+  height: 44px;
+  border-radius: 6px;
+  background: #2a2a3e;
+}
+
+.skeleton-super-admin :global(.ant-skeleton-button.ant-skeleton-button-round) {
+  border-radius: 22px;
+}
+
+/* Input skeleton */
+.skeleton-super-admin :global(.ant-skeleton-input) {
+  height: 44px;
+  border-radius: 6px;
+  background: #2a2a3e;
+}
+
+/* Active state (e.g., placeholder before real content) */
+.skeleton-super-admin.ant-skeleton-active :global(.ant-skeleton-title),
+.skeleton-super-admin.ant-skeleton-active :global(.ant-skeleton-paragraph > li) {
+  background: var(--skeleton-gradient);
+  background-size: var(--skeleton-background-size);
+  animation: shimmer-dark var(--skeleton-duration) var(--skeleton-timing);
+}
+
+/* Light theme support (future, if SuperAdmin adds light mode) */
+@media (prefers-color-scheme: light) {
+  .skeleton-super-admin {
+    --skeleton-gradient: linear-gradient(
+      90deg,
+      #f0f0f0 0%,
+      #e0e0e0 50%,
+      #f0f0f0 100%
+    );
+  }
+
+  .skeleton-super-admin :global(.ant-skeleton-title),
+  .skeleton-super-admin :global(.ant-skeleton-paragraph) > li {
+    background: #f0f0f0;
+  }
+
+  .skeleton-super-admin :global(.ant-skeleton-avatar) {
+    background: #f0f0f0;
+  }
+
+  .skeleton-super-admin :global(.ant-skeleton-button),
+  .skeleton-super-admin :global(.ant-skeleton-input) {
+    background: #f0f0f0;
+  }
+}
