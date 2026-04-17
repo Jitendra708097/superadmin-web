@@ -5,7 +5,7 @@
  *              Alert banner renders above content when alerts exist.
  */
 
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router';
 import Sidebar from './Sidebar.jsx';
 import Header from './Header.jsx';
 import AlertBanner from './AlertBanner.jsx';

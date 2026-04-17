@@ -4,7 +4,7 @@
  *              Each row is clickable and color-coded by severity.
  */
 
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import Skeleton from '@components/common/Skeleton.jsx';
 import { formatTimeAgo } from '@utils/formatters.js';
 

@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { useDispatch, useSelector } from 'react-redux';
 import { closeCommandSearch, selectCommandSearchOpen, openCommandSearch } from '@store/uiSlice.js';
 import { useCommandSearch } from '@hooks/useKeyboard.js';

@@ -6,7 +6,7 @@
  */
 
 import { lazy, Suspense } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router';
 import ProtectedRoute from './ProtectedRoute.jsx';
 import AppLayout      from '@components/Layout/AppLayout.jsx';
 

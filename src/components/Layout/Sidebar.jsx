@@ -5,7 +5,7 @@
  *              Shows badge counts for orgs, alerts, active impersonation.
  */
 
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router';
 import { useDispatch, useSelector } from 'react-redux';
 import { Tooltip } from 'antd';
 import {

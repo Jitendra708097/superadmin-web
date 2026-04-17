@@ -4,7 +4,7 @@
  *              Shows org name, employee count, plan badge, time ago.
  */
 
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import Skeleton from '@components/common/Skeleton.jsx';
 import PlanBadge    from '@components/common/PlanBadge.jsx';
 import MonoValue    from '@components/common/MonoValue.jsx';

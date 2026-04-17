@@ -4,7 +4,7 @@
  *              Also blocks non-superadmin roles.
  */
 
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router';
 import { useAuth } from '@hooks/useAuth.js';
 
 export default function ProtectedRoute({ children }) {
