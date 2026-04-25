@@ -3,7 +3,7 @@
  * @description Dark-themed 404 page with glitch effect and navigation back.
  */
 
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 
 export default function NotFoundPage() {
   const navigate = useNavigate();

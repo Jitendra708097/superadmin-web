@@ -38,6 +38,14 @@ export const orgApi = baseApi.injectEndpoints({
       }),
     }),
 
+    sendBillingAlert: builder.mutation({
+      query: ({ id, alertType, customMessage }) => ({
+        url: `/superadmin/organisations/${id}/billing/alerts`,
+        method: 'POST',
+        body: { alertType, customMessage },
+      }),
+    }),
+
     createOrg: builder.mutation({
       query: (body) => ({
         url:    '/superadmin/organisations',
@@ -100,6 +108,7 @@ export const {
   useGetOrgEmployeesQuery,
   useGetOrgAttendanceSummaryQuery,
   useGetOrgBillingHistoryQuery,
+  useSendBillingAlertMutation,
   useCreateOrgMutation,
   useSuspendOrgMutation,
   useActivateOrgMutation,

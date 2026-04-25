@@ -7,7 +7,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useLocation }                              from 'react-router-dom';
+import { useLocation }                              from 'react-router';
 import { useDispatch, useSelector }                 from 'react-redux';
 import { Table, Select, Tooltip, message, Input }   from 'antd';
 import {
@@ -41,6 +41,30 @@ import OrgStatusBadge from '@components/common/OrgStatusBadge.jsx';
 import ConfirmModal from '@components/common/ConfirmModal.jsx';
 
 const { TextArea } = Input;
+
+function buildImpersonationHash(session, selectedOrg) {
+  const payload = {
+    accessToken: session.token,
+    user: session.employee || {
+      id: session.adminId,
+      name: session.adminName || 'Admin',
+      email: session.adminEmail || '',
+      role: 'admin',
+      orgId: session.orgId,
+      orgName: session.orgName || selectedOrg?.name || null,
+      isImpersonated: true,
+      impersonatedBy: session.impersonatedBy || null,
+      impersonationSessionId: session.id,
+      impersonationStartedAt: session.startedAt,
+    },
+    org: {
+      id: session.orgId,
+      name: session.orgName || selectedOrg?.name || null,
+    },
+  };
+
+  return window.btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+}
 
 /* ── Active session timer ─────────────────────────────────────── */
 function useElapsedTimer(startedAt) {
@@ -170,6 +194,15 @@ export default function ImpersonationPage() {
       }));
 
       message.success(`Impersonation session started — ${selectedOrg.name}`);
+
+      if (session.adminPortalUrl && session.token) {
+        const handoffHash = buildImpersonationHash(session, selectedOrg);
+        window.open(
+          `${session.adminPortalUrl.replace(/\/$/, '')}/login#impersonation=${encodeURIComponent(handoffHash)}`,
+          '_blank',
+          'noopener,noreferrer'
+        );
+      }
 
       // Reset form
       setSelectedOrg(null);

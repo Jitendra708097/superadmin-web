@@ -6,7 +6,7 @@
  */
 
 import { useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router';
 import { Table, Select, DatePicker, Tooltip, message } from 'antd';
 import { DownloadOutlined, ExpandAltOutlined } from '@ant-design/icons';
 import { useGetAuditLogsQuery } from '@store/api/auditApi.js';

@@ -14,9 +14,9 @@ import { useGetOrgAuditLogsQuery } from '@store/api/auditApi.js';
 import OrgStatusBadge from '@components/common/OrgStatusBadge.jsx';
 import PlanBadge      from '@components/common/PlanBadge.jsx';
 import MonoValue      from '@components/common/MonoValue.jsx';
-import StatusDot      from '@components/common/StatusDot.jsx';
 import { formatINR, formatDate, formatDateTime, formatNumber } from '@utils/formatters.js';
 import { AUDIT_ACTION_COLORS } from '@utils/constants.js';
+import BillingAlertModal from './BillingAlertModal.jsx';
 
 function DetailRow({ label, value, mono }) {
   return (
@@ -32,6 +32,7 @@ function DetailRow({ label, value, mono }) {
 
 export default function OrgDetailDrawer({ orgId, open, onClose }) {
   const [activeTab, setActiveTab] = useState('overview');
+  const [billingAlertOpen, setBillingAlertOpen] = useState(false);
 
   const { data: orgData, isLoading: orgLoading } = useGetOrgByIdQuery(orgId, { skip: !orgId });
   const { data: empData,   isLoading: empLoading   } = useGetOrgEmployeesQuery({ id: orgId, params: { limit: 20 } }, { skip: !orgId || activeTab !== 'employees' });
@@ -131,14 +132,26 @@ export default function OrgDetailDrawer({ orgId, open, onClose }) {
       key:   'billing',
       label: 'Billing',
       children: (
-        <Table
-          columns={billColumns}
-          dataSource={bills}
-          rowKey="id"
-          size="small"
-          loading={billLoading}
-          pagination={{ pageSize: 10, size: 'small' }}
-        />
+        <div className="space-y-4">
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => setBillingAlertOpen(true)}
+              disabled={!org}
+              className="px-3 py-1.5 rounded-md text-xs font-['JetBrains_Mono'] font-semibold text-[#080810] bg-[#00d4ff] hover:bg-[#33ddff] disabled:opacity-50"
+            >
+              Send Billing Alert
+            </button>
+          </div>
+          <Table
+            columns={billColumns}
+            dataSource={bills}
+            rowKey="id"
+            size="small"
+            loading={billLoading}
+            pagination={{ pageSize: 10, size: 'small' }}
+          />
+        </div>
       ),
     },
     {
@@ -158,7 +171,8 @@ export default function OrgDetailDrawer({ orgId, open, onClose }) {
   ];
 
   return (
-    <Drawer
+    <>
+      <Drawer
       open={open}
       onClose={onClose}
       width={640}
@@ -208,6 +222,14 @@ export default function OrgDetailDrawer({ orgId, open, onClose }) {
           size="small"
         />
       </div>
-    </Drawer>
+      </Drawer>
+      {org && (
+        <BillingAlertModal
+          open={billingAlertOpen}
+          org={org}
+          onClose={() => setBillingAlertOpen(false)}
+        />
+      )}
+    </>
   );
 }

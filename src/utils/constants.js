@@ -61,11 +61,12 @@ export const HEALTH_STATUS = {
 };
 
 export const QUEUE_NAMES = [
-  'attendance',
+  'autoAbsent',
+  'checkoutGrace',
+  'faceEnrollment',
   'notification',
-  'face',
-  'report',
-  'offline_sync',
+  'reportGeneration',
+  'offlineSync',
 ];
 
 export const AUDIT_ACTIONS = {
