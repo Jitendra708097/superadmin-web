@@ -17,6 +17,7 @@ import { useNavigate, useSearchParams } from 'react-router';
 import { useDispatch } from 'react-redux';
 import { Select, message } from 'antd';
 import { PlusOutlined, DownloadOutlined, ReloadOutlined } from '@ant-design/icons';
+import axiosInstance from '@api/axiosInstance.js';
 import { useGetAllOrgsQuery, useActivateOrgMutation } from '@store/api/orgApi.js';
 import { useStartImpersonationMutation } from '@store/api/impersonateApi.js';
 import { useDebounce } from '@hooks/useDebounce.js';
@@ -53,6 +54,28 @@ const SORT_OPTIONS = [
   { value: 'name:asc', label: 'Name A -> Z' },
 ];
 
+function getFilenameFromDisposition(headerValue, fallback) {
+  const match = /filename="?([^"]+)"?/i.exec(headerValue || '');
+  return match ? match[1] : fallback;
+}
+
+function getFallbackExportFilename(contentType, baseName) {
+  return contentType?.includes('spreadsheetml')
+    ? `${baseName}.xlsx`
+    : `${baseName}.csv`;
+}
+
+function downloadBlob(blob, filename) {
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+}
+
 export default function OrganisationsPage() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -71,6 +94,7 @@ export default function OrganisationsPage() {
   const [planOrg, setPlanOrg] = useState(null);
   const [trialOrg, setTrialOrg] = useState(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     const idParam = searchParams.get('id');
@@ -133,8 +157,34 @@ export default function OrganisationsPage() {
     setPage(1);
   }, []);
 
-  const handleExport = () => {
-    message.info('CSV export queued - check your email shortly');
+  const handleExport = async (format = 'csv') => {
+    try {
+      setExporting(true);
+      const response = await axiosInstance.get('/superadmin/organisations/export', {
+        params: {
+          search: debouncedSearch || undefined,
+          status: status || undefined,
+          plan: plan || undefined,
+          sortBy: sortField,
+          order: sortOrder,
+          format,
+        },
+        responseType: 'blob',
+      });
+
+      downloadBlob(
+        response.data,
+        getFilenameFromDisposition(
+          response.headers['content-disposition'],
+          getFallbackExportFilename(response.headers['content-type'], 'organisations-export')
+        )
+      );
+      message.success(`Organisation ${format === 'xlsx' ? 'Excel' : 'CSV'} export downloaded`);
+    } catch (error) {
+      message.error(error.response?.data?.error?.message || 'Organisation export failed');
+    } finally {
+      setExporting(false);
+    }
   };
 
   return (
@@ -146,11 +196,21 @@ export default function OrganisationsPage() {
         actions={
           <div className="flex items-center gap-2">
             <button
-              onClick={handleExport}
+              onClick={() => handleExport('csv')}
+              disabled={exporting}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-sans text-[#6b6b8a] hover:text-[#e8e8f0] bg-[#161625] border border-[#1e1e35] hover:border-[#00d4ff]/30 transition-colors"
             >
               <DownloadOutlined />
-              Export CSV
+              {exporting ? 'Exporting...' : 'Export CSV'}
+            </button>
+
+            <button
+              onClick={() => handleExport('xlsx')}
+              disabled={exporting}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-sans text-[#6b6b8a] hover:text-[#e8e8f0] bg-[#161625] border border-[#1e1e35] hover:border-[#00d4ff]/30 transition-colors disabled:opacity-50"
+            >
+              <DownloadOutlined />
+              {exporting ? 'Exporting...' : 'Export Excel'}
             </button>
 
             <button
