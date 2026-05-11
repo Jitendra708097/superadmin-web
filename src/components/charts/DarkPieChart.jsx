@@ -73,6 +73,16 @@ export default function DarkPieChart({
         </Pie>
         <Tooltip
           contentStyle={CHART_TOOLTIP_STYLE}
+          labelStyle={{
+            color: '#e8e8f0',
+            fontFamily: 'JetBrains Mono',
+            fontWeight: 700,
+          }}
+          itemStyle={{
+            color: '#e8e8f0',
+            fontFamily: 'JetBrains Mono',
+            fontWeight: 700,
+          }}
           formatter={tooltipFormatter}
         />
         {showLegend && (

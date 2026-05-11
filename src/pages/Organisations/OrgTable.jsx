@@ -5,11 +5,11 @@
  *              Actions: View, Impersonate, Suspend/Activate, Change Plan, Extend Trial, Audit Log.
  */
 
-import { useState } from 'react';
-import { Table, Dropdown, Tooltip } from 'antd';
+import { Table, Dropdown } from 'antd';
 import {
   MoreOutlined, EyeOutlined, UserSwitchOutlined, StopOutlined,
   CheckCircleOutlined, SwapOutlined, ClockCircleOutlined, AuditOutlined,
+  CloseCircleOutlined,
 } from '@ant-design/icons';
 import OrgStatusBadge from '@components/common/OrgStatusBadge.jsx';
 import PlanBadge      from '@components/common/PlanBadge.jsx';
@@ -27,6 +27,7 @@ export default function OrgTable({
   onViewDetail,
   onSuspend,
   onActivate,
+  onCancel,
   onChangePlan,
   onExtendTrial,
   onImpersonate,
@@ -112,6 +113,7 @@ export default function OrgTable({
       render: (_, record) => {
         const isActive    = record.status === 'active' || record.status === 'trial';
         const isTrial     = record.status === 'trial';
+        const isCancelled = record.status === 'cancelled';
 
         const items = [
           {
@@ -124,6 +126,7 @@ export default function OrgTable({
             key:   'impersonate',
             icon:  <UserSwitchOutlined className="text-[#a855f7]" />,
             label: <span className="text-[#a855f7]">Impersonate</span>,
+            disabled: isCancelled,
             onClick: () => onImpersonate?.(record),
           },
           { type: 'divider' },
@@ -142,13 +145,21 @@ export default function OrgTable({
             key:   'plan',
             icon:  <SwapOutlined />,
             label: 'Change Plan',
+            disabled: isCancelled,
             onClick: () => onChangePlan?.(record),
           },
           isTrial && {
             key:   'trial',
             icon:  <ClockCircleOutlined />,
             label: 'Extend Trial',
+            disabled: isCancelled,
             onClick: () => onExtendTrial?.(record),
+          },
+          !isCancelled && {
+            key:   'cancel',
+            icon:  <CloseCircleOutlined className="text-[#ff3366]" />,
+            label: <span className="text-[#ff3366]">Cancel</span>,
+            onClick: () => onCancel?.(record),
           },
           { type: 'divider' },
           {

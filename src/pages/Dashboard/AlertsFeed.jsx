@@ -5,6 +5,7 @@
  */
 
 import { useNavigate } from 'react-router';
+import EmptyState from '@components/common/EmptyState.jsx';
 import Skeleton from '@components/common/Skeleton.jsx';
 import { formatTimeAgo } from '@utils/formatters.js';
 
@@ -12,15 +13,16 @@ const ALERT_TYPE_CONFIG = {
   payment_failed:  { color: 'text-[#ff3366]', bg: 'hover:bg-[#ff3366]/5', dot: 'bg-[#ff3366]', label: 'Payment Failed' },
   trial_expiring:  { color: 'text-[#ffaa00]', bg: 'hover:bg-[#ffaa00]/5', dot: 'bg-[#ffaa00]', label: 'Trial Expiring' },
   queue_failed:    { color: 'text-[#ff3366]', bg: 'hover:bg-[#ff3366]/5', dot: 'bg-[#ff3366]', label: 'Queue Failed'  },
+  invite_failed:   { color: 'text-[#ffaa00]', bg: 'hover:bg-[#ffaa00]/5', dot: 'bg-[#ffaa00]', label: 'Invite Failed' },
   org_suspended:   { color: 'text-[#6b6b8a]', bg: 'hover:bg-[#161625]',  dot: 'bg-[#6b6b8a]', label: 'Suspended'    },
   new_signup:      { color: 'text-[#00ff88]', bg: 'hover:bg-[#00ff88]/5', dot: 'bg-[#00ff88]', label: 'New Signup'   },
 };
 
-export default function AlertsFeed({ alerts = [], isLoading }) {
+export default function AlertsFeed({ alerts = [], isLoading, isError }) {
   const navigate = useNavigate();
 
   const handleClick = (alert) => {
-    if (alert.type === 'payment_failed' || alert.type === 'trial_expiring') {
+    if (['payment_failed', 'trial_expiring', 'invite_failed', 'org_suspended'].includes(alert.type)) {
       navigate(`/organisations?id=${alert.orgId}`);
     } else if (alert.type === 'queue_failed') {
       navigate('/health');
@@ -41,6 +43,8 @@ export default function AlertsFeed({ alerts = [], isLoading }) {
 
       {isLoading ? (
         <Skeleton active paragraph={{ rows: 3 }} />
+      ) : isError ? (
+        <EmptyState title="Alerts unavailable" description="Alert feed could not be loaded." />
       ) : alerts.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-8 text-center">
           <div className="text-[#00ff88] text-2xl mb-2">✓</div>

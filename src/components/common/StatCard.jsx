@@ -43,16 +43,22 @@ export default function StatCard({
   subtitle    = null,
   animate     = true,
   rawValue    = null,     // pass pre-formatted string to skip animation
+  onClick     = null,
 }) {
   const numericValue = typeof value === 'number' ? value : 0;
   const animatedNum  = useCountUp(animate && typeof value === 'number' ? numericValue : 0, 900);
   const displayValue = rawValue || (typeof value === 'number' ? animatedNum : value);
 
   return (
-    <div
+    <button
+      type="button"
+      onClick={onClick || undefined}
+      disabled={!onClick}
       className={`
+        w-full text-left
         bg-[#0f0f1a] border border-[#1e1e35] rounded-lg p-5
-        transition-all duration-300 cursor-default group
+        transition-all duration-300 group
+        ${onClick ? 'cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#00d4ff]/40' : 'cursor-default'}
         ${BORDER_MAP[accentColor]}
       `}
     >
@@ -105,6 +111,6 @@ export default function StatCard({
           <span>{trendValue}</span>
         </div>
       )}
-    </div>
+    </button>
   );
 }

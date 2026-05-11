@@ -10,10 +10,10 @@ export const impersonateApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
 
     startImpersonation: builder.mutation({
-      query: ({ orgId, adminId, reason }) => ({
+      query: ({ orgId, adminId, reason, forceEndExisting = false }) => ({
         url:    '/superadmin/impersonation/start',
         method: 'POST',
-        body:   { orgId, adminId, reason },
+        body:   { orgId, adminId, reason, forceEndExisting },
       }),
       invalidatesTags: ['Impersonation'],
     }),
@@ -36,6 +36,11 @@ export const impersonateApi = baseApi.injectEndpoints({
       providesTags: ['Impersonation'],
     }),
 
+    getSessionDetail: builder.query({
+      query: (sessionId) => ({ url: `/superadmin/impersonation/${sessionId}` }),
+      providesTags: (result, error, id) => [{ type: 'Impersonation', id }],
+    }),
+
   }),
   overrideExisting: false,
 });
@@ -45,4 +50,5 @@ export const {
   useEndImpersonationMutation,
   useGetActiveSessionQuery,
   useGetSessionHistoryQuery,
+  useGetSessionDetailQuery,
 } = impersonateApi;

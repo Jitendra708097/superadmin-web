@@ -9,7 +9,7 @@ export const analyticsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
 
     getDashboardStats: builder.query({
-      query: () => ({ url: '/superadmin/analytics/dashboard' }),
+      query: (params) => ({ url: '/superadmin/analytics/dashboard', params }),
       providesTags: ['Dashboard'],
     }),
 
@@ -39,7 +39,7 @@ export const analyticsApi = baseApi.injectEndpoints({
     }),
 
     getAlerts: builder.query({
-      query: () => ({ url: '/superadmin/analytics/alerts' }),
+      query: (params) => ({ url: '/superadmin/analytics/alerts', params }),
       providesTags: ['Dashboard'],
     }),
 

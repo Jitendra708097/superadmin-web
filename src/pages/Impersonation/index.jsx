@@ -9,18 +9,21 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation }                              from 'react-router';
 import { useDispatch, useSelector }                 from 'react-redux';
-import { Table, Select, Tooltip, message, Input }   from 'antd';
+import { DatePicker, Drawer, Table, Select, Tooltip, message, Input } from 'antd';
 import {
   UserSwitchOutlined,
   StopOutlined,
   SearchOutlined,
   ExclamationCircleOutlined,
+  EyeOutlined,
+  ClearOutlined,
 }                                                   from '@ant-design/icons';
 
 import {
   useStartImpersonationMutation,
   useEndImpersonationMutation,
   useGetActiveSessionQuery,
+  useGetSessionDetailQuery,
   useGetSessionHistoryQuery,
 }                                                   from '@store/api/impersonateApi.js';
 import { useGetOrgEmployeesQuery }                  from '@store/api/orgApi.js';
@@ -31,7 +34,7 @@ import {
   clearImpersonation,
 }                                                   from '@store/uiSlice.js';
 import { useDebounce }                              from '@hooks/useDebounce.js';
-import { formatDateTime, formatTimeAgo, formatSessionDuration } from '@utils/formatters.js';
+import { formatDateTime, formatTimeAgo } from '@utils/formatters.js';
 import { parseError }                               from '@utils/errorHandler.js';
 import { PAGE_SIZE }                                from '@utils/constants.js';
 
@@ -41,30 +44,7 @@ import OrgStatusBadge from '@components/common/OrgStatusBadge.jsx';
 import ConfirmModal from '@components/common/ConfirmModal.jsx';
 
 const { TextArea } = Input;
-
-function buildImpersonationHash(session, selectedOrg) {
-  const payload = {
-    accessToken: session.token,
-    user: session.employee || {
-      id: session.adminId,
-      name: session.adminName || 'Admin',
-      email: session.adminEmail || '',
-      role: 'admin',
-      orgId: session.orgId,
-      orgName: session.orgName || selectedOrg?.name || null,
-      isImpersonated: true,
-      impersonatedBy: session.impersonatedBy || null,
-      impersonationSessionId: session.id,
-      impersonationStartedAt: session.startedAt,
-    },
-    org: {
-      id: session.orgId,
-      name: session.orgName || selectedOrg?.name || null,
-    },
-  };
-
-  return window.btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
-}
+const { RangePicker } = DatePicker;
 
 /* ── Active session timer ─────────────────────────────────────── */
 function useElapsedTimer(startedAt) {
@@ -92,6 +72,33 @@ function useElapsedTimer(startedAt) {
   return elapsed;
 }
 
+function useRemainingTimer(expiresAt) {
+  const [remaining, setRemaining] = useState(null);
+
+  useEffect(() => {
+    if (!expiresAt) {
+      setRemaining(null);
+      return undefined;
+    }
+
+    const tick = () => {
+      const diffMs = Math.max(0, new Date(expiresAt).getTime() - Date.now());
+      const h = Math.floor(diffMs / 3600000);
+      const m = Math.floor((diffMs % 3600000) / 60000);
+      const s = Math.floor((diffMs % 60000) / 1000);
+      setRemaining(
+        `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+      );
+    };
+
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [expiresAt]);
+
+  return remaining;
+}
+
 /* ─────────────────────────────────────────────────────────────── */
 
 export default function ImpersonationPage() {
@@ -101,6 +108,7 @@ export default function ImpersonationPage() {
   /* ── Active session from store ─────────────────────────────── */
   const activeSession = useSelector(selectImpersonation);
   const elapsed       = useElapsedTimer(activeSession?.startedAt);
+  const remaining     = useRemainingTimer(activeSession?.expiresAt);
 
   /* ── Start session form state ──────────────────────────────── */
   const [orgSearch,     setOrgSearch]     = useState(location.state?.orgName || '');
@@ -109,10 +117,20 @@ export default function ImpersonationPage() {
   );
   const [selectedAdmin, setSelectedAdmin] = useState(null);
   const [reason,        setReason]        = useState('');
+  const [startConfirm,  setStartConfirm]  = useState(false);
   const [endConfirm,    setEndConfirm]    = useState(false);
   const [historyPage,   setHistoryPage]   = useState(1);
+  const [historyFilters, setHistoryFilters] = useState({
+    orgId: '',
+    adminId: '',
+    status: '',
+    reason: '',
+    dateRange: null,
+  });
+  const [detailSessionId, setDetailSessionId] = useState(null);
 
   const debouncedOrgSearch = useDebounce(orgSearch, 300);
+  const debouncedReasonFilter = useDebounce(historyFilters.reason, 300);
 
   /* ── Queries ───────────────────────────────────────────────── */
   const { data: orgSearchData, isFetching: orgSearching } = useSearchOrgsQuery(
@@ -125,8 +143,21 @@ export default function ImpersonationPage() {
     { skip: !selectedOrg?.id }
   );
 
+  const historyQueryParams = {
+    page: historyPage,
+    limit: PAGE_SIZE,
+    orgId: historyFilters.orgId || undefined,
+    adminId: historyFilters.adminId || undefined,
+    status: historyFilters.status || undefined,
+    reason: debouncedReasonFilter || undefined,
+    startDate: historyFilters.dateRange?.[0]?.toISOString(),
+    endDate: historyFilters.dateRange?.[1]?.toISOString(),
+  };
+
   const { data: historyData, isLoading: historyLoading, refetch: refetchHistory } =
-    useGetSessionHistoryQuery({ page: historyPage, limit: PAGE_SIZE });
+    useGetSessionHistoryQuery(historyQueryParams);
+  const { data: detailData, isFetching: detailLoading } =
+    useGetSessionDetailQuery(detailSessionId, { skip: !detailSessionId });
 
   /* ── Sync active session from server on mount ──────────────── */
   const { data: activeSessionData } = useGetActiveSessionQuery(undefined, {
@@ -135,15 +166,18 @@ export default function ImpersonationPage() {
 
   useEffect(() => {
     const serverSession = activeSessionData?.data;
-    if (serverSession && !activeSession) {
+    if (serverSession) {
       dispatch(setImpersonation({
         sessionId:   serverSession.id,
         orgId:       serverSession.orgId,
         orgName:     serverSession.orgName,
         adminName:   serverSession.adminName,
         startedAt:   serverSession.startedAt,
-        token:       serverSession.token,
+        expiresAt:   serverSession.expiresAt,
+        lastSeenAt:  serverSession.lastSeenAt,
       }));
+    } else if (activeSessionData && activeSession) {
+      dispatch(clearImpersonation());
     }
   }, [activeSessionData, activeSession, dispatch]);
 
@@ -156,6 +190,14 @@ export default function ImpersonationPage() {
   const admins     = adminsData?.data?.employees?.filter((e) => e.role === 'admin') || [];
   const history    = historyData?.data?.sessions || [];
   const histTotal  = historyData?.data?.total    || 0;
+  const sessionDetail = detailData?.data || null;
+  const hasHistoryFilters = Boolean(
+    historyFilters.orgId ||
+    historyFilters.adminId ||
+    historyFilters.status ||
+    historyFilters.reason ||
+    historyFilters.dateRange
+  );
 
   /* ── Handlers ──────────────────────────────────────────────── */
   const handleSelectOrg = useCallback((org) => {
@@ -170,16 +212,41 @@ export default function ImpersonationPage() {
     setSelectedAdmin(null);
   }, []);
 
-  const handleStartSession = async () => {
+  const updateHistoryFilter = useCallback((key, value) => {
+    setHistoryFilters((prev) => ({ ...prev, [key]: value }));
+    setHistoryPage(1);
+  }, []);
+
+  const clearHistoryFilters = useCallback(() => {
+    setHistoryFilters({
+      orgId: '',
+      adminId: '',
+      status: '',
+      reason: '',
+      dateRange: null,
+    });
+    setHistoryPage(1);
+  }, []);
+
+  const requestStartSession = () => {
     if (!selectedOrg)   { message.error('Select an organisation');  return; }
     if (!selectedAdmin) { message.error('Select an admin user');     return; }
     if (!reason.trim()) { message.error('Reason is required');       return; }
+    if (reason.trim().length < 10) {
+      message.error('Reason must be at least 10 characters');
+      return;
+    }
 
+    setStartConfirm(true);
+  };
+
+  const handleStartSession = async (forceEndExisting = false) => {
     try {
       const result = await startImpersonation({
         orgId:   selectedOrg.id,
         adminId: selectedAdmin,
         reason:  reason.trim(),
+        forceEndExisting,
       }).unwrap();
 
       const session = result.data;
@@ -190,19 +257,21 @@ export default function ImpersonationPage() {
         orgName:    session.orgName    || selectedOrg.name,
         adminName:  session.adminName  || 'Admin',
         startedAt:  session.startedAt,
-        token:      session.token,
+        expiresAt:  session.expiresAt,
+        lastSeenAt: session.lastSeenAt,
       }));
 
       message.success(`Impersonation session started — ${selectedOrg.name}`);
 
-      if (session.adminPortalUrl && session.token) {
-        const handoffHash = buildImpersonationHash(session, selectedOrg);
+      if (session.adminPortalUrl && session.handoffCode) {
         window.open(
-          `${session.adminPortalUrl.replace(/\/$/, '')}/login#impersonation=${encodeURIComponent(handoffHash)}`,
+          `${session.adminPortalUrl.replace(/\/$/, '')}/login#impersonationCode=${encodeURIComponent(session.handoffCode)}`,
           '_blank',
           'noopener,noreferrer'
         );
       }
+
+      setStartConfirm(false);
 
       // Reset form
       setSelectedOrg(null);
@@ -211,7 +280,11 @@ export default function ImpersonationPage() {
       setReason('');
       refetchHistory();
     } catch (err) {
-      message.error(parseError(err));
+      if (err?.status === 409 || err?.data?.code === 'SA_018_ACTIVE_SESSION') {
+        message.warning('An active session already exists. End it before starting another session.');
+      } else {
+        message.error(parseError(err));
+      }
     }
   };
 
@@ -303,6 +376,27 @@ export default function ImpersonationPage() {
           ? <MonoValue value={formatTimeAgo(v)} color="muted" size="xs" />
           : <span className="text-[10px] text-[#6b6b8a]">—</span>,
     },
+    {
+      title:     'End Reason',
+      dataIndex: 'endReason',
+      width:     120,
+      render:    (v) => <MonoValue value={v || '-'} color="muted" size="xs" />,
+    },
+    {
+      title: '',
+      key: 'actions',
+      width: 56,
+      render: (_, record) => (
+        <Tooltip title="View session detail">
+          <button
+            onClick={() => setDetailSessionId(record.id)}
+            className="text-[#6b6b8a] hover:text-[#00d4ff] transition-colors"
+          >
+            <EyeOutlined />
+          </button>
+        </Tooltip>
+      ),
+    },
   ];
 
   /* ── Render ────────────────────────────────────────────────── */
@@ -345,6 +439,11 @@ export default function ImpersonationPage() {
                 <span className="text-[#6b6b8a] text-[10px] font-sans">
                   All actions are logged under [SuperAdmin via Impersonation]
                 </span>
+                {remaining && (
+                  <span className="font-['JetBrains_Mono'] text-[10px] text-[#ffaa00] tabular-nums">
+                    Expires in {remaining}
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -547,7 +646,7 @@ export default function ImpersonationPage() {
 
           {/* Start button */}
           <button
-            onClick={handleStartSession}
+            onClick={requestStartSession}
             disabled={starting || !!activeSession || !selectedOrg || !selectedAdmin || !reason.trim()}
             className="w-full py-2.5 rounded-md font-['JetBrains_Mono'] text-sm font-bold
                        text-[#080810] bg-[#a855f7] hover:bg-[#b87af0]
@@ -660,6 +759,52 @@ export default function ImpersonationPage() {
           <MonoValue value={`${histTotal} sessions`} color="muted" size="xs" />
         </div>
 
+        <div className="px-5 py-4 border-b border-[#1e1e35] grid grid-cols-1 md:grid-cols-5 gap-3">
+          <input
+            value={historyFilters.orgId}
+            onChange={(e) => updateHistoryFilter('orgId', e.target.value)}
+            placeholder="Org ID"
+            className="bg-[#161625] border border-[#1e1e35] rounded-md px-3 py-2 text-[#e8e8f0] text-xs outline-none focus:border-[#00d4ff]/50"
+          />
+          <input
+            value={historyFilters.adminId}
+            onChange={(e) => updateHistoryFilter('adminId', e.target.value)}
+            placeholder="Admin ID"
+            className="bg-[#161625] border border-[#1e1e35] rounded-md px-3 py-2 text-[#e8e8f0] text-xs outline-none focus:border-[#00d4ff]/50"
+          />
+          <Select
+            value={historyFilters.status || undefined}
+            onChange={(value) => updateHistoryFilter('status', value || '')}
+            allowClear
+            placeholder="Status"
+            options={[
+              { label: 'Active', value: 'active' },
+              { label: 'Ended', value: 'ended' },
+            ]}
+          />
+          <RangePicker
+            value={historyFilters.dateRange}
+            onChange={(value) => updateHistoryFilter('dateRange', value)}
+          />
+          <div className="flex gap-2">
+            <input
+              value={historyFilters.reason}
+              onChange={(e) => updateHistoryFilter('reason', e.target.value)}
+              placeholder="Reason keyword"
+              className="min-w-0 flex-1 bg-[#161625] border border-[#1e1e35] rounded-md px-3 py-2 text-[#e8e8f0] text-xs outline-none focus:border-[#00d4ff]/50"
+            />
+            <Tooltip title="Clear filters">
+              <button
+                onClick={clearHistoryFilters}
+                disabled={!hasHistoryFilters}
+                className="w-9 h-9 rounded-md border border-[#1e1e35] text-[#6b6b8a] hover:text-[#00d4ff] hover:border-[#00d4ff]/40 disabled:opacity-40"
+              >
+                <ClearOutlined />
+              </button>
+            </Tooltip>
+          </div>
+        </div>
+
         <Table
           columns={columns}
           dataSource={history}
@@ -693,6 +838,99 @@ export default function ImpersonationPage() {
       </div>
 
       {/* ── End session confirm ───────────────────────── */}
+      <Drawer
+        title="Impersonation Session"
+        open={!!detailSessionId}
+        onClose={() => setDetailSessionId(null)}
+        width={640}
+        styles={{ body: { background: '#080810' }, header: { background: '#0f0f1a', borderBottom: '1px solid #1e1e35' } }}
+      >
+        {detailLoading ? (
+          <div className="text-[#6b6b8a] text-sm">Loading session detail...</div>
+        ) : sessionDetail ? (
+          <div className="space-y-5">
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                ['Organisation', sessionDetail.orgName || '-'],
+                ['Admin', sessionDetail.adminName || '-'],
+                ['Started', formatDateTime(sessionDetail.startedAt)],
+                ['Expires', formatDateTime(sessionDetail.expiresAt)],
+                ['Last Seen', sessionDetail.lastSeenAt ? formatDateTime(sessionDetail.lastSeenAt) : '-'],
+                ['Ended', sessionDetail.endedAt ? formatDateTime(sessionDetail.endedAt) : 'Active'],
+                ['End Reason', sessionDetail.endReason || '-'],
+                ['End IP', sessionDetail.endedFromIp || '-'],
+              ].map(([label, value]) => (
+                <div key={label} className="bg-[#0f0f1a] border border-[#1e1e35] rounded-md p-3">
+                  <div className="text-[#6b6b8a] text-[9px] uppercase tracking-widest mb-1">{label}</div>
+                  <div className="text-[#e8e8f0] text-xs break-words">{value}</div>
+                </div>
+              ))}
+            </div>
+
+            <div className="bg-[#0f0f1a] border border-[#1e1e35] rounded-md p-3">
+              <div className="text-[#6b6b8a] text-[9px] uppercase tracking-widest mb-2">Reason</div>
+              <p className="text-[#e8e8f0] text-xs leading-relaxed">{sessionDetail.reason || '-'}</p>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-[#e8e8f0] text-sm font-sans font-semibold">Linked Audit Actions</h3>
+                <MonoValue value={`${sessionDetail.auditCount || 0} actions`} color="muted" size="xs" />
+              </div>
+              <Table
+                size="small"
+                pagination={false}
+                rowKey="id"
+                dataSource={sessionDetail.auditLogs || []}
+                columns={[
+                  {
+                    title: 'When',
+                    dataIndex: 'createdAt',
+                    width: 120,
+                    render: (value) => (
+                      <Tooltip title={formatDateTime(value)}>
+                        <MonoValue value={formatTimeAgo(value)} color="muted" size="xs" />
+                      </Tooltip>
+                    ),
+                  },
+                  {
+                    title: 'Action',
+                    dataIndex: 'action',
+                    render: (value) => (
+                      <span className="text-[10px] font-['JetBrains_Mono'] text-[#00d4ff] uppercase tracking-wider">
+                        {value}
+                      </span>
+                    ),
+                  },
+                  {
+                    title: 'IP',
+                    dataIndex: 'ipAddress',
+                    width: 110,
+                    render: (value) => <MonoValue value={value || '-'} color="muted" size="xs" />,
+                  },
+                ]}
+                locale={{
+                  emptyText: <span className="text-[#6b6b8a] text-xs">No linked audit actions yet</span>,
+                }}
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="text-[#6b6b8a] text-sm">Session not found.</div>
+        )}
+      </Drawer>
+
+      <ConfirmModal
+        open={startConfirm}
+        onCancel={() => setStartConfirm(false)}
+        onConfirm={() => handleStartSession(false)}
+        loading={starting}
+        title="Start Audited Impersonation?"
+        description={`You are about to open ${selectedOrg?.name || 'this organisation'} as an admin user. This session is time-limited, idle-limited, and every action is audited.`}
+        confirmText="I Understand, Start Session"
+        variant="warning"
+      />
+
       <ConfirmModal
         open={endConfirm}
         onCancel={() => setEndConfirm(false)}

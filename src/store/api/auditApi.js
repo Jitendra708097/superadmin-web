@@ -13,6 +13,11 @@ export const auditApi = baseApi.injectEndpoints({
       providesTags: ['Audit'],
     }),
 
+    getAuditLogSummary: builder.query({
+      query: (params) => ({ url: '/superadmin/audit-logs/summary', params }),
+      providesTags: ['Audit'],
+    }),
+
     getAuditLogById: builder.query({
       query: (id) => ({ url: `/superadmin/audit-logs/${id}` }),
       providesTags: (result, error, id) => [{ type: 'Audit', id }],
@@ -36,6 +41,7 @@ export const auditApi = baseApi.injectEndpoints({
 
 export const {
   useGetAuditLogsQuery,
+  useGetAuditLogSummaryQuery,
   useGetAuditLogByIdQuery,
   useGetOrgAuditLogsQuery,
   useExportAuditLogsQuery,

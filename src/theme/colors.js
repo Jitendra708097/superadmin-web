@@ -59,9 +59,10 @@ export const COLORS = {
 };
 
 export const CHART_TOOLTIP_STYLE = {
-  background:   '#161625',
-  border:       '1px solid #1e1e35',
+  backgroundColor: '#080810',
+  border:       '1px solid #00d4ff55',
   borderRadius: '6px',
+  boxShadow:    '0 8px 24px rgba(0,0,0,0.45)',
   color:        '#e8e8f0',
   fontFamily:   'JetBrains Mono',
   fontSize:     '12px',

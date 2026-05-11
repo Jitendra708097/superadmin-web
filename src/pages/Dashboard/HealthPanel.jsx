@@ -5,24 +5,26 @@
  */
 
 import StatusDot from '@components/common/StatusDot.jsx';
+import EmptyState from '@components/common/EmptyState.jsx';
 import MonoValue from '@components/common/MonoValue.jsx';
-import { formatUptime } from '@utils/formatters.js';
+import { formatProcessUptime, formatUptime } from '@utils/formatters.js';
 
-export default function HealthPanel({ health = {}, isLoading }) {
+export default function HealthPanel({ health = {}, isLoading, isError }) {
   const services = [
     { label: 'PostgreSQL',   status: health.database || 'healthy',  value: health.dbLatency ? `${health.dbLatency}ms` : null },
     { label: 'Redis',        status: health.redis    || 'healthy',  value: health.redisLatency ? `${health.redisLatency}ms` : null },
     { label: 'API',          status: health.api      || 'healthy',  value: null },
   ];
 
-  const { text: uptimeText, color: uptimeColor } = formatUptime(health.uptime || 99.9);
+  const { text: availabilityText, color: availabilityColor } = formatUptime(health.availabilityPercent ?? health.uptime ?? 99.9);
+  const processUptimeText = formatProcessUptime(health.processUptimeSeconds);
 
   return (
     <div className="bg-[#0f0f1a] border border-[#1e1e35] rounded-lg p-5 h-full">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-[#e8e8f0] text-sm font-sans font-medium">Platform Health</h3>
-        <span className={`font-['JetBrains_Mono'] text-xs font-semibold ${uptimeColor}`}>
-          {uptimeText} uptime
+        <span className={`font-['JetBrains_Mono'] text-xs font-semibold ${availabilityColor}`}>
+          {availabilityText} availability
         </span>
       </div>
 
@@ -32,6 +34,8 @@ export default function HealthPanel({ health = {}, isLoading }) {
             <div key={i} className="h-8 bg-[#161625] rounded animate-pulse" />
           ))}
         </div>
+      ) : isError ? (
+        <EmptyState title="Health unavailable" description="Service health could not be loaded." />
       ) : (
         <div className="space-y-3">
           {services.map(({ label, status, value }) => (
@@ -56,6 +60,10 @@ export default function HealthPanel({ health = {}, isLoading }) {
           {/* Queues summary */}
           <div className="mt-2 pt-2 border-t border-[#1e1e35]">
             <div className="flex items-center justify-between">
+              <span className="text-[#6b6b8a] text-xs font-sans">API Process</span>
+              <MonoValue value={processUptimeText} color="muted" size="xs" />
+            </div>
+            <div className="flex items-center justify-between mt-2">
               <span className="text-[#6b6b8a] text-xs font-sans">Bull Queues</span>
               <span className={`text-[10px] font-['JetBrains_Mono'] uppercase ${
                 health.failedJobs > 0 ? 'text-[#ff3366]' : 'text-[#00ff88]'

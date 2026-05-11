@@ -5,14 +5,11 @@
  */
 
 import { createSlice } from '@reduxjs/toolkit';
-import { getItem, setItem } from '@utils/storage.js';
-import { STORAGE_KEYS } from '@utils/constants.js';
-
 const initialState = {
-  sidebarCollapsed:   getItem(STORAGE_KEYS.SIDEBAR) || false,
+  sidebarCollapsed:   false,
   commandSearchOpen:  false,
   alerts:             [],          // { id, type, message, org? }
-  activeImpersonation: null,       // { orgId, orgName, adminName, startedAt, token }
+  activeImpersonation: null,       // { orgId, orgName, adminName, startedAt, expiresAt }
   globalLoading:      false,
 };
 
@@ -24,11 +21,9 @@ const uiSlice = createSlice({
   reducers: {
     toggleSidebar(state) {
       state.sidebarCollapsed = !state.sidebarCollapsed;
-      setItem(STORAGE_KEYS.SIDEBAR, state.sidebarCollapsed);
     },
     setSidebarCollapsed(state, action) {
       state.sidebarCollapsed = action.payload;
-      setItem(STORAGE_KEYS.SIDEBAR, action.payload);
     },
     openCommandSearch(state) {
       state.commandSearchOpen = true;

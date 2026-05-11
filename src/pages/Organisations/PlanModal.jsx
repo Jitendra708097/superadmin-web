@@ -18,6 +18,7 @@ const PLAN_OPTIONS = [PLAN_TIERS.TRIAL, PLAN_TIERS.STANDARD];
 
 export default function PlanModal({ open, org, onClose }) {
   const [newPlan, setNewPlan] = useState('');
+  const [effectiveDate, setEffectiveDate] = useState('');
   const [reason, setReason] = useState('');
   const [changePlan, { isLoading }] = useChangePlanMutation();
 
@@ -36,9 +37,10 @@ export default function PlanModal({ open, org, onClose }) {
     }
 
     try {
-      await changePlan({ id: org.id, plan: newPlan, reason: reason.trim() }).unwrap();
+      await changePlan({ id: org.id, plan: newPlan, reason: reason.trim(), effectiveDate: effectiveDate || undefined }).unwrap();
       message.success(`${org.name} moved to ${PLAN_LABELS[newPlan]}`);
       setNewPlan('');
+      setEffectiveDate('');
       setReason('');
       onClose();
     } catch (err) {
@@ -48,6 +50,7 @@ export default function PlanModal({ open, org, onClose }) {
 
   const handleCancel = () => {
     setNewPlan('');
+    setEffectiveDate('');
     setReason('');
     onClose();
   };
@@ -99,6 +102,15 @@ export default function PlanModal({ open, org, onClose }) {
         </div>
 
         <div className="mb-5">
+          <label className="block text-[10px] text-[#6b6b8a] uppercase tracking-widest mb-2">
+            Effective Date
+          </label>
+          <input
+            type="date"
+            value={effectiveDate}
+            onChange={(event) => setEffectiveDate(event.target.value)}
+            className="w-full mb-4 px-3 py-2 bg-[#161625] border border-[#1e1e35] rounded-md text-[#e8e8f0] text-sm font-sans outline-none focus:border-[#00d4ff]/50"
+          />
           <label className="block text-[10px] text-[#6b6b8a] uppercase tracking-widest mb-2">
             Reason <span className="text-[#ff3366]">*</span>
           </label>

@@ -8,9 +8,10 @@
 import { useState } from 'react';
 import { Modal, Form, Input, Select, message } from 'antd';
 import { ApartmentOutlined } from '@ant-design/icons';
-import { useCreateOrgMutation } from '@store/api/orgApi.js';
+import { useCreateOrgMutation, usePreviewOrgSlugQuery } from '@store/api/orgApi.js';
 import { PLAN_TIERS, PLAN_LABELS, PLAN_COLORS, PLAN_PRICES, TRIAL_DAYS } from '@utils/constants.js';
 import { parseError } from '@utils/errorHandler.js';
+import { useDebounce } from '@hooks/useDebounce.js';
 
 const TIMEZONES = [
   { label: 'Asia/Kolkata (IST)', value: 'Asia/Kolkata' },
@@ -30,6 +31,13 @@ const PLAN_OPTIONS = [PLAN_TIERS.TRIAL, PLAN_TIERS.STANDARD];
 export default function CreateOrgModal({ open, onClose }) {
   const [form] = Form.useForm();
   const [createOrg, { isLoading }] = useCreateOrgMutation();
+  const orgName = Form.useWatch('orgName', form);
+  const debouncedOrgName = useDebounce(orgName, 300);
+  const { data: slugData, isFetching: slugLoading } = usePreviewOrgSlugQuery(
+    { name: debouncedOrgName },
+    { skip: !open || !debouncedOrgName || String(debouncedOrgName).trim().length < 3 }
+  );
+  const slugPreview = slugData?.data;
 
   const handleSubmit = async (values) => {
     try {
@@ -110,6 +118,24 @@ export default function CreateOrgModal({ open, onClose }) {
               className="font-sans"
             />
           </Form.Item>
+
+          {(slugPreview || slugLoading) && (
+            <div className="bg-[#161625] border border-[#1e1e35] rounded-md px-3 py-2 -mt-2 mb-3">
+              <span className="text-[10px] text-[#6b6b8a] font-['JetBrains_Mono'] uppercase tracking-wider">
+                Slug
+              </span>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="font-['JetBrains_Mono'] text-xs text-[#00d4ff]">
+                  {slugLoading ? 'checking...' : `@${slugPreview.slug}`}
+                </span>
+                {slugPreview?.adjusted && (
+                  <span className="text-[10px] text-[#ffaa00] font-sans">
+                    adjusted for duplicate
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
 
           <div className="mb-1 mt-4">
             <span className="text-[10px] text-[#6b6b8a] uppercase tracking-[0.15em] font-sans">

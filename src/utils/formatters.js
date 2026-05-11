@@ -157,7 +157,7 @@ export function formatSessionDuration(startedAt) {
  * Format uptime percentage with color class
  */
 export function formatUptime(value) {
-  if (value == null) return { text: '—', color: 'text-[#6b6b8a]' };
+  if (value == null || isNaN(value)) return { text: 'N/A', color: 'text-[#8a8aa8]' };
   const pct = Number(value).toFixed(2);
   let color = 'text-[#00ff88]';
   if (value < 99)   color = 'text-[#ffaa00]';
@@ -166,6 +166,18 @@ export function formatUptime(value) {
 }
 
 // ─── File Size ────────────────────────────────────────────────────────────────
+
+export function formatProcessUptime(seconds) {
+  if (seconds == null || isNaN(seconds)) return 'N/A';
+  const totalSeconds = Math.max(0, Math.floor(Number(seconds)));
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+
+  if (days > 0) return `${days}d ${hours}h`;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return `${minutes}m`;
+}
 
 export function formatBytes(bytes) {
   if (!bytes) return '0 B';

@@ -5,12 +5,13 @@
  */
 
 import { useNavigate } from 'react-router';
+import EmptyState from '@components/common/EmptyState.jsx';
 import Skeleton from '@components/common/Skeleton.jsx';
 import PlanBadge    from '@components/common/PlanBadge.jsx';
 import MonoValue    from '@components/common/MonoValue.jsx';
 import { formatTimeAgo } from '@utils/formatters.js';
 
-export default function RecentSignups({ signups = [], isLoading }) {
+export default function RecentSignups({ signups = [], isLoading, isError }) {
   const navigate = useNavigate();
 
   return (
@@ -22,6 +23,8 @@ export default function RecentSignups({ signups = [], isLoading }) {
 
       {isLoading ? (
         <Skeleton active paragraph={{ rows: 5 }} avatar={{ size: 28 }} />
+      ) : isError ? (
+        <EmptyState title="Signups unavailable" description="Recent signups could not be loaded." />
       ) : signups.length === 0 ? (
         <p className="text-[#6b6b8a] text-xs font-sans text-center py-6">No signups yet</p>
       ) : (

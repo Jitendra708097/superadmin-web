@@ -14,15 +14,12 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
-import { useDispatch } from 'react-redux';
 import { Select, message } from 'antd';
 import { PlusOutlined, DownloadOutlined, ReloadOutlined } from '@ant-design/icons';
 import axiosInstance from '@api/axiosInstance.js';
-import { useGetAllOrgsQuery, useActivateOrgMutation } from '@store/api/orgApi.js';
-import { useStartImpersonationMutation } from '@store/api/impersonateApi.js';
+import { useGetAllOrgsQuery } from '@store/api/orgApi.js';
 import { useDebounce } from '@hooks/useDebounce.js';
 import { ORG_STATUS, PLAN_TIERS, PAGE_SIZE } from '@utils/constants.js';
-import { parseError } from '@utils/errorHandler.js';
 
 import PageHeader from '@components/common/PageHeader.jsx';
 import OrgTable from './OrgTable.jsx';
@@ -31,6 +28,8 @@ import SuspendModal from './SuspendModal.jsx';
 import PlanModal from './PlanModal.jsx';
 import TrialModal from './TrialModal.jsx';
 import CreateOrgModal from './CreateOrgModal.jsx';
+import ActivateModal from './ActivateModal.jsx';
+import CancelOrgModal from './CancelOrgModal.jsx';
 
 const STATUS_OPTIONS = [
   { value: '', label: 'All Statuses' },
@@ -78,7 +77,6 @@ function downloadBlob(blob, filename) {
 
 export default function OrganisationsPage() {
   const navigate = useNavigate();
-  const dispatch = useDispatch();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [search, setSearch] = useState('');
@@ -93,16 +91,35 @@ export default function OrganisationsPage() {
   const [suspendOrg, setSuspendOrg] = useState(null);
   const [planOrg, setPlanOrg] = useState(null);
   const [trialOrg, setTrialOrg] = useState(null);
+  const [activateOrg, setActivateOrg] = useState(null);
+  const [cancelOrg, setCancelOrg] = useState(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     const idParam = searchParams.get('id');
+    const planParam = searchParams.get('plan');
+    const statusParam = searchParams.get('status');
+    const sortParam = searchParams.get('sort');
     if (idParam) {
       setDetailId(idParam);
+    }
+    if (planParam) {
+      setPlan(planParam);
+    }
+    if (statusParam) {
+      setStatus(statusParam);
+    }
+    if (sortParam) {
+      setSort(sortParam);
+    }
+    if (idParam || planParam || statusParam || sortParam) {
       setSearchParams((prev) => {
         const next = new URLSearchParams(prev);
         next.delete('id');
+        next.delete('plan');
+        next.delete('status');
+        next.delete('sort');
         return next;
       }, { replace: true });
     }
@@ -120,20 +137,9 @@ export default function OrganisationsPage() {
     order: sortOrder,
   });
 
-  const [activateOrg] = useActivateOrgMutation();
-  const [startImpersonation] = useStartImpersonationMutation();
-
   const orgs = data?.data?.orgs || [];
   const total = data?.data?.total || 0;
-
-  const handleActivate = useCallback(async (org) => {
-    try {
-      await activateOrg(org.id).unwrap();
-      message.success(`${org.name} activated`);
-    } catch (err) {
-      message.error(parseError(err));
-    }
-  }, [activateOrg]);
+  const activeFilterCount = [Boolean(search), Boolean(status), Boolean(plan)].filter(Boolean).length;
 
   const handleImpersonate = useCallback(async (org) => {
     navigate('/impersonation', { state: { orgId: org.id, orgName: org.name } });
@@ -254,19 +260,25 @@ export default function OrganisationsPage() {
 
         <Select value={sort} onChange={(v) => { setSort(v); setPage(1); }} style={{ width: 160 }} options={SORT_OPTIONS} size="small" />
 
-        {(search || status || plan) && (
-          <button
-            onClick={() => {
-              setSearch('');
-              setStatus('');
-              setPlan('');
-              setPage(1);
-            }}
-            className="text-[10px] font-sans text-[#ff3366] hover:text-[#ff5580] transition-colors flex items-center gap-1"
-          >
-            Clear filters
-          </button>
+        {activeFilterCount > 0 && (
+          <span className="font-['JetBrains_Mono'] text-[10px] text-[#6b6b8a] bg-[#161625] border border-[#1e1e35] px-2 py-1 rounded">
+            {activeFilterCount} filter{activeFilterCount === 1 ? '' : 's'} active
+          </span>
         )}
+
+        <button
+          onClick={() => {
+            setSearch('');
+            setStatus('');
+            setPlan('');
+            setSort('createdAt:desc');
+            setPage(1);
+          }}
+          disabled={activeFilterCount === 0 && sort === 'createdAt:desc'}
+          className="px-3 py-1.5 rounded-md text-xs font-sans text-[#6b6b8a] hover:text-[#e8e8f0] bg-[#161625] border border-[#1e1e35] hover:border-[#ffaa00]/30 transition-colors disabled:opacity-50 disabled:hover:text-[#6b6b8a]"
+        >
+          Clear filters
+        </button>
 
         <span className="ml-auto font-['JetBrains_Mono'] text-[10px] text-[#6b6b8a]">
           {isFetching ? 'Updating...' : `${total.toLocaleString()} orgs`}
@@ -281,7 +293,8 @@ export default function OrganisationsPage() {
         onPageChange={setPage}
         onViewDetail={(org) => setDetailId(org.id)}
         onSuspend={(org) => setSuspendOrg(org)}
-        onActivate={handleActivate}
+        onActivate={(org) => setActivateOrg(org)}
+        onCancel={(org) => setCancelOrg(org)}
         onChangePlan={(org) => setPlanOrg(org)}
         onExtendTrial={(org) => setTrialOrg(org)}
         onImpersonate={handleImpersonate}
@@ -293,6 +306,8 @@ export default function OrganisationsPage() {
       <OrgDetailDrawer orgId={detailId} open={!!detailId} onClose={() => setDetailId(null)} />
 
       <SuspendModal open={!!suspendOrg} org={suspendOrg} onClose={() => setSuspendOrg(null)} />
+      <ActivateModal open={!!activateOrg} org={activateOrg} onClose={() => setActivateOrg(null)} />
+      <CancelOrgModal open={!!cancelOrg} org={cancelOrg} onClose={() => setCancelOrg(null)} />
 
       <PlanModal open={!!planOrg} org={planOrg} onClose={() => setPlanOrg(null)} />
 

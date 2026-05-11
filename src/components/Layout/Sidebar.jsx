@@ -32,6 +32,24 @@ const NAV_ITEMS = [
   { path: '/feature-flags', label: 'Feature Flags', Icon: ControlOutlined },
 ];
 
+function SidebarIcon({ Icon, active = false, tone = 'default' }) {
+  const color = tone === 'danger'
+    ? '#ff3366'
+    : active
+      ? '#00d4ff'
+      : '#8a8aa8';
+
+  return (
+    <span
+      className="w-5 h-5 flex items-center justify-center flex-shrink-0"
+      style={{ color }}
+      aria-hidden="true"
+    >
+      <Icon style={{ fontSize: 17, lineHeight: 1, display: 'block' }} />
+    </span>
+  );
+}
+
 export default function Sidebar() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -101,15 +119,19 @@ export default function Sidebar() {
                   ${collapsed ? 'justify-center' : 'gap-3'}
                 `}
               >
-                <Icon className="text-base flex-shrink-0" />
-                {!collapsed && <span className="flex-1 truncate">{label}</span>}
-                {!collapsed && badge && (
-                  <span className={`ml-auto text-[10px] font-['JetBrains_Mono'] font-bold px-1.5 py-0.5 rounded ${badge === '!' ? 'bg-[#ff3366] text-white' : 'bg-[#a855f7] text-white'}`}>
-                    {badge}
-                  </span>
-                )}
-                {collapsed && badge && (
-                  <span className={`absolute top-1 right-1 w-2 h-2 rounded-full ${badge === '!' ? 'bg-[#ff3366]' : 'bg-[#a855f7]'}`} />
+                {({ isActive }) => (
+                  <>
+                    <SidebarIcon Icon={Icon} active={isActive} />
+                    {!collapsed && <span className="flex-1 truncate">{label}</span>}
+                    {!collapsed && badge && (
+                      <span className={`ml-auto text-[10px] font-['JetBrains_Mono'] font-bold px-1.5 py-0.5 rounded ${badge === '!' ? 'bg-[#ff3366] text-white' : 'bg-[#a855f7] text-white'}`}>
+                        {badge}
+                      </span>
+                    )}
+                    {collapsed && badge && (
+                      <span className={`absolute top-1 right-1 w-2 h-2 rounded-full ${badge === '!' ? 'bg-[#ff3366]' : 'bg-[#a855f7]'}`} />
+                    )}
+                  </>
                 )}
               </NavLink>
             </Tooltip>
@@ -136,7 +158,7 @@ export default function Sidebar() {
             onClick={handleLogout}
             className={`w-full flex items-center rounded-md px-2.5 py-2 text-[#6b6b8a] hover:text-[#ff3366] hover:bg-[#ff3366]/10 transition-all duration-150 font-sans text-[13px] ${collapsed ? 'justify-center' : 'gap-3'}`}
           >
-            <LogoutOutlined className="text-base flex-shrink-0" />
+            <SidebarIcon Icon={LogoutOutlined} tone="danger" />
             {!collapsed && <span>Logout</span>}
           </button>
         </Tooltip>
@@ -145,7 +167,7 @@ export default function Sidebar() {
           onClick={() => dispatch(toggleSidebar())}
           className="w-full flex items-center justify-center mt-2 py-1.5 text-[#6b6b8a] hover:text-[#00d4ff] transition-colors"
         >
-          {collapsed ? <MenuUnfoldOutlined className="text-sm" /> : <MenuFoldOutlined className="text-sm" />}
+          <SidebarIcon Icon={collapsed ? MenuUnfoldOutlined : MenuFoldOutlined} />
         </button>
       </div>
     </aside>

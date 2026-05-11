@@ -33,6 +33,10 @@ export const billingApi = baseApi.injectEndpoints({
       providesTags: ['Billing'],
     }),
 
+    exportInvoices: builder.query({
+      query: (params) => ({ url: '/superadmin/billing/invoices/export', params }),
+    }),
+
     getTopOrgsByMRR: builder.query({
       query: (params) => ({ url: '/superadmin/billing/top-orgs', params }),
       providesTags: ['Billing'],
@@ -48,5 +52,6 @@ export const {
   useGetPlanBreakdownQuery,
   useGetChurnedOrgsQuery,
   useGetAllInvoicesQuery,
+  useExportInvoicesQuery,
   useGetTopOrgsByMRRQuery,
 } = billingApi;

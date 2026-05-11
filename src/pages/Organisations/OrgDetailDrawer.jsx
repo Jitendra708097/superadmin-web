@@ -5,10 +5,12 @@
  */
 
 import { useState } from 'react';
-import { Drawer, Tabs, Table, Spin } from 'antd';
+import { Drawer, Tabs, Table, Spin, message, Input, Select } from 'antd';
 import {
   useGetOrgByIdQuery, useGetOrgEmployeesQuery,
   useGetOrgAttendanceSummaryQuery, useGetOrgBillingHistoryQuery,
+  useResendOrgInviteMutation,
+  useAddOrgNoteMutation,
 } from '@store/api/orgApi.js';
 import { useGetOrgAuditLogsQuery } from '@store/api/auditApi.js';
 import OrgStatusBadge from '@components/common/OrgStatusBadge.jsx';
@@ -17,6 +19,25 @@ import MonoValue      from '@components/common/MonoValue.jsx';
 import { formatINR, formatDate, formatDateTime, formatNumber } from '@utils/formatters.js';
 import { AUDIT_ACTION_COLORS } from '@utils/constants.js';
 import BillingAlertModal from './BillingAlertModal.jsx';
+import OrgProfileModal from './OrgProfileModal.jsx';
+import TransferOwnerModal from './TransferOwnerModal.jsx';
+import { parseError } from '@utils/errorHandler.js';
+import { useDebounce } from '@hooks/useDebounce.js';
+
+const EMPLOYEE_ROLE_OPTIONS = [
+  { label: 'All roles', value: 'all' },
+  { label: 'Admin', value: 'admin' },
+  { label: 'Manager', value: 'manager' },
+  { label: 'Employee', value: 'employee' },
+];
+
+const EMPLOYEE_STATUS_OPTIONS = [
+  { label: 'All status', value: 'all' },
+  { label: 'Active', value: 'active' },
+  { label: 'Suspended', value: 'suspended' },
+];
+
+const { TextArea } = Input;
 
 function DetailRow({ label, value, mono }) {
   return (
@@ -33,18 +54,39 @@ function DetailRow({ label, value, mono }) {
 export default function OrgDetailDrawer({ orgId, open, onClose }) {
   const [activeTab, setActiveTab] = useState('overview');
   const [billingAlertOpen, setBillingAlertOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [ownerOpen, setOwnerOpen] = useState(false);
+  const [employeePage, setEmployeePage] = useState(1);
+  const [employeeSearch, setEmployeeSearch] = useState('');
+  const [employeeRole, setEmployeeRole] = useState('all');
+  const [employeeStatus, setEmployeeStatus] = useState('all');
+  const [noteText, setNoteText] = useState('');
+  const [resendInvite, { isLoading: resendingInvite }] = useResendOrgInviteMutation();
+  const [addOrgNote, { isLoading: addingNote }] = useAddOrgNoteMutation();
+  const debouncedEmployeeSearch = useDebounce(employeeSearch, 300);
+
+  const employeeParams = {
+    page: employeePage,
+    limit: 10,
+    ...(debouncedEmployeeSearch ? { search: debouncedEmployeeSearch } : {}),
+    ...(employeeRole !== 'all' ? { role: employeeRole } : {}),
+    ...(employeeStatus !== 'all' ? { status: employeeStatus } : {}),
+  };
 
   const { data: orgData, isLoading: orgLoading } = useGetOrgByIdQuery(orgId, { skip: !orgId });
-  const { data: empData,   isLoading: empLoading   } = useGetOrgEmployeesQuery({ id: orgId, params: { limit: 20 } }, { skip: !orgId || activeTab !== 'employees' });
+  const { data: empData,   isLoading: empLoading   } = useGetOrgEmployeesQuery({ id: orgId, params: employeeParams }, { skip: !orgId || activeTab !== 'employees' });
   const { data: attData,   isLoading: attLoading   } = useGetOrgAttendanceSummaryQuery(orgId, { skip: !orgId || activeTab !== 'attendance' });
   const { data: billData,  isLoading: billLoading  } = useGetOrgBillingHistoryQuery({ id: orgId, params: {} }, { skip: !orgId || activeTab !== 'billing' });
   const { data: auditData, isLoading: auditLoading } = useGetOrgAuditLogsQuery({ orgId, params: { limit: 20 } }, { skip: !orgId || activeTab !== 'audit' });
 
   const org     = orgData?.data;
   const emps    = empData?.data?.employees || [];
+  const empTotal = empData?.data?.total || 0;
   const att     = attData?.data || {};
   const bills   = billData?.data?.invoices || [];
+  const currentEstimate = billData?.data?.currentEstimate || null;
   const audits  = auditData?.data?.logs    || [];
+  const notes = org?.settings?.supportNotes || [];
 
   const empColumns = [
     { title: 'Name',  dataIndex: 'name',  render: (v) => <span className="text-xs text-[#e8e8f0]">{v}</span> },
@@ -69,6 +111,34 @@ export default function OrgDetailDrawer({ orgId, open, onClose }) {
     { title: 'By', dataIndex: 'performedByName', render: (v) => <span className="text-xs text-[#6b6b8a]">{v || 'System'}</span> },
   ];
 
+  const handleResendInvite = async () => {
+    try {
+      const result = await resendInvite(orgId).unwrap();
+      if (result?.data?.queued || result?.queued) {
+        message.success('Admin invite queued');
+      } else {
+        message.warning(result?.data?.error || result?.error || 'Invite resend attempted');
+      }
+    } catch (err) {
+      message.error(parseError(err));
+    }
+  };
+
+  const handleAddNote = async () => {
+    if (!noteText.trim()) {
+      message.error('Note is required');
+      return;
+    }
+
+    try {
+      await addOrgNote({ id: orgId, note: noteText.trim() }).unwrap();
+      setNoteText('');
+      message.success('Organisation note added');
+    } catch (err) {
+      message.error(parseError(err));
+    }
+  };
+
   const tabs = [
     {
       key:   'overview',
@@ -81,15 +151,137 @@ export default function OrgDetailDrawer({ orgId, open, onClose }) {
           <DetailRow label="Name"           value={org.name}                     />
           <DetailRow label="Slug"           value={`@${org.slug}`}               />
           <DetailRow label="Owner Email"    value={org.ownerEmail}               />
+          <DetailRow label="Invite Status"  value={org.settings?.invite?.queued ? 'Queued' : org.settings?.invite?.error ? 'Failed' : 'Not sent'} />
+          <DetailRow label="Invite Last Tried" value={formatDateTime(org.settings?.invite?.lastAttemptAt)} />
           <DetailRow label="Plan"           value={<PlanBadge plan={org.plan} />} />
           <DetailRow label="Status"         value={<OrgStatusBadge status={org.status} />} />
+          <DetailRow label="Health"         value={`${org.healthScore ?? 0}/100 - ${org.healthLabel || 'Unknown'}`} />
+          <DetailRow label="Health Notes"   value={(org.healthReasons || []).join(', ')} />
           <DetailRow label="Employees"      value={formatNumber(org.employeeCount)} mono />
           <DetailRow label="Branches"       value={org.branchCount}          mono />
           <DetailRow label="MRR"            value={formatINR(org.mrr || 0)}       />
           <DetailRow label="Joined"         value={formatDate(org.createdAt)}     />
           <DetailRow label="Trial Ends"     value={formatDate(org.trialEndsAt)}   />
+          {org.suspendedAt && <DetailRow label="Suspended At" value={formatDateTime(org.suspendedAt)} />}
+          {org.suspensionReason && <DetailRow label="Suspension Reason" value={org.suspensionReason} />}
           <DetailRow label="Timezone"       value={org.settings?.timezone}        />
           <DetailRow label="Country"        value={org.settings?.country}         />
+          {org.settings?.lastProfileUpdate && (
+            <DetailRow label="Profile Updated" value={formatDateTime(org.settings.lastProfileUpdate.updatedAt)} />
+          )}
+            {org.settings?.lastPlanChange && (
+              <DetailRow label="Last Plan Reason" value={org.settings.lastPlanChange.reason} />
+            )}
+            {org.settings?.lastPlanChange?.effectiveAt && (
+              <DetailRow label="Plan Effective" value={formatDateTime(org.settings.lastPlanChange.effectiveAt)} />
+            )}
+            {org.settings?.lastOwnerTransfer && (
+              <DetailRow label="Owner Transfer" value={formatDateTime(org.settings.lastOwnerTransfer.changedAt)} />
+            )}
+          {org.settings?.lastTrialExtension && (
+            <DetailRow label="Last Trial Reason" value={org.settings.lastTrialExtension.reason} />
+          )}
+          <div className="pt-4 flex flex-wrap gap-2">
+            <button
+              onClick={() => setProfileOpen(true)}
+              disabled={!org}
+              className="px-3 py-1.5 rounded-md text-xs font-['JetBrains_Mono'] font-semibold text-[#e8e8f0] bg-[#161625] border border-[#1e1e35] hover:border-[#00d4ff]/40 disabled:opacity-50"
+            >
+              Edit Profile
+            </button>
+            <button
+              onClick={() => setOwnerOpen(true)}
+              disabled={!org}
+              className="px-3 py-1.5 rounded-md text-xs font-['JetBrains_Mono'] font-semibold text-[#e8e8f0] bg-[#161625] border border-[#1e1e35] hover:border-[#a855f7]/40 disabled:opacity-50"
+            >
+              Transfer Owner
+            </button>
+            <button
+              onClick={handleResendInvite}
+              disabled={!org || resendingInvite}
+              className="px-3 py-1.5 rounded-md text-xs font-['JetBrains_Mono'] font-semibold text-[#080810] bg-[#00d4ff] hover:bg-[#33ddff] disabled:opacity-50"
+            >
+              {resendingInvite ? 'Sending...' : 'Resend Admin Invite'}
+            </button>
+          </div>
+        </div>
+      ) : null,
+    },
+    {
+      key: 'lifecycle',
+      label: 'Lifecycle',
+      children: orgLoading ? (
+        <div className="flex justify-center py-10"><Spin /></div>
+      ) : org ? (
+        <div className="space-y-3">
+          {[
+            { label: 'Created', at: org.createdAt, detail: `Plan: ${org.plan}` },
+            org.settings?.invite && { label: 'Invite Attempt', at: org.settings.invite.lastAttemptAt, detail: org.settings.invite.error || 'Queued' },
+            org.settings?.lastPlanChange && { label: 'Plan Changed', at: org.settings.lastPlanChange.changedAt, detail: `${org.settings.lastPlanChange.from} -> ${org.settings.lastPlanChange.to}: ${org.settings.lastPlanChange.reason}` },
+            org.settings?.lastOwnerTransfer && { label: 'Owner Transferred', at: org.settings.lastOwnerTransfer.changedAt, detail: `${org.settings.lastOwnerTransfer.toEmployeeEmail}: ${org.settings.lastOwnerTransfer.reason}` },
+            org.settings?.lastTrialExtension && { label: 'Trial Extended', at: org.settings.lastTrialExtension.changedAt, detail: org.settings.lastTrialExtension.reason },
+            org.settings?.lastProfileUpdate && { label: 'Profile Updated', at: org.settings.lastProfileUpdate.updatedAt, detail: `Previous name: ${org.settings.lastProfileUpdate.previousName || '-'}` },
+            org.suspendedAt && { label: 'Suspended', at: org.suspendedAt, detail: org.suspensionReason },
+            org.settings?.lastActivation && { label: 'Activated', at: org.settings.lastActivation.activatedAt, detail: org.settings.lastActivation.reason },
+            org.cancelledAt && { label: 'Cancelled', at: org.cancelledAt, detail: org.cancellationReason },
+          ].filter(Boolean).map((event) => (
+            <div key={`${event.label}-${event.at}`} className="bg-[#161625] border border-[#1e1e35] rounded-md p-3">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[#e8e8f0] text-xs font-sans font-medium">{event.label}</span>
+                <MonoValue value={formatDateTime(event.at)} color="muted" size="xs" />
+              </div>
+              <p className="text-[#6b6b8a] text-xs mt-1">{event.detail || '-'}</p>
+            </div>
+          ))}
+        </div>
+      ) : null,
+    },
+    {
+      key: 'notes',
+      label: 'Notes',
+      children: orgLoading ? (
+        <div className="flex justify-center py-10"><Spin /></div>
+      ) : org ? (
+        <div className="space-y-4">
+          <div className="bg-[#161625] border border-[#1e1e35] rounded-md p-3">
+            <label className="block text-[10px] text-[#6b6b8a] uppercase tracking-widest mb-2 font-sans">
+              Internal note
+            </label>
+            <TextArea
+              value={noteText}
+              onChange={(event) => setNoteText(event.target.value)}
+              placeholder="Add support, billing, or lifecycle context..."
+              rows={3}
+              maxLength={1000}
+              showCount
+            />
+            <div className="flex justify-end mt-3">
+              <button
+                type="button"
+                onClick={handleAddNote}
+                disabled={addingNote || !noteText.trim()}
+                className="px-3 py-1.5 rounded-md text-xs font-['JetBrains_Mono'] font-semibold text-[#080810] bg-[#00d4ff] hover:bg-[#33ddff] disabled:opacity-50"
+              >
+                {addingNote ? 'Adding...' : 'Add Note'}
+              </button>
+            </div>
+          </div>
+
+          {notes.length ? notes.map((entry) => (
+            <div key={entry.id || entry.createdAt} className="bg-[#161625] border border-[#1e1e35] rounded-md p-3">
+              <div className="flex items-center justify-between gap-3 mb-2">
+                <span className="text-[#e8e8f0] text-xs font-sans font-medium">
+                  {entry.createdByName || 'Superadmin'}
+                </span>
+                <MonoValue value={formatDateTime(entry.createdAt)} color="muted" size="xs" />
+              </div>
+              <p className="text-[#c9c9d6] text-xs leading-5 whitespace-pre-wrap">{entry.note}</p>
+            </div>
+          )) : (
+            <div className="text-[#6b6b8a] text-xs font-sans py-8 text-center">
+              No internal notes yet.
+            </div>
+          )}
         </div>
       ) : null,
     },
@@ -97,14 +289,53 @@ export default function OrgDetailDrawer({ orgId, open, onClose }) {
       key:   'employees',
       label: 'Employees',
       children: (
-        <Table
-          columns={empColumns}
-          dataSource={emps}
-          rowKey="id"
-          size="small"
-          loading={empLoading}
-          pagination={{ pageSize: 10, size: 'small' }}
-        />
+        <div className="space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-[1fr_130px_140px] gap-2">
+            <Input.Search
+              value={employeeSearch}
+              onChange={(event) => {
+                setEmployeeSearch(event.target.value);
+                setEmployeePage(1);
+              }}
+              placeholder="Search name, email, code"
+              allowClear
+              size="small"
+            />
+            <Select
+              value={employeeRole}
+              onChange={(value) => {
+                setEmployeeRole(value);
+                setEmployeePage(1);
+              }}
+              options={EMPLOYEE_ROLE_OPTIONS}
+              size="small"
+            />
+            <Select
+              value={employeeStatus}
+              onChange={(value) => {
+                setEmployeeStatus(value);
+                setEmployeePage(1);
+              }}
+              options={EMPLOYEE_STATUS_OPTIONS}
+              size="small"
+            />
+          </div>
+          <Table
+            columns={empColumns}
+            dataSource={emps}
+            rowKey="id"
+            size="small"
+            loading={empLoading}
+            pagination={{
+              current: employeePage,
+              pageSize: 10,
+              total: empTotal,
+              size: 'small',
+              showSizeChanger: false,
+            }}
+            onChange={(pagination) => setEmployeePage(pagination.current || 1)}
+          />
+        </div>
       ),
     },
     {
@@ -145,7 +376,7 @@ export default function OrgDetailDrawer({ orgId, open, onClose }) {
           </div>
           <Table
             columns={billColumns}
-            dataSource={bills}
+            dataSource={bills.length > 0 ? bills : currentEstimate ? [currentEstimate] : []}
             rowKey="id"
             size="small"
             loading={billLoading}
@@ -228,6 +459,20 @@ export default function OrgDetailDrawer({ orgId, open, onClose }) {
           open={billingAlertOpen}
           org={org}
           onClose={() => setBillingAlertOpen(false)}
+        />
+      )}
+      {org && (
+        <OrgProfileModal
+          open={profileOpen}
+          org={org}
+          onClose={() => setProfileOpen(false)}
+        />
+      )}
+      {org && (
+        <TransferOwnerModal
+          open={ownerOpen}
+          org={org}
+          onClose={() => setOwnerOpen(false)}
         />
       )}
     </>
