@@ -9,7 +9,10 @@ import axios from 'axios';
 import { getItem, setItem, removeItem } from '@utils/storage.js';
 import { STORAGE_KEYS } from '@utils/constants.js';
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+// const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const BASE_URL = import.meta.env.VITE_API_URL
+  ? `${import.meta.env.VITE_API_URL}/api/v1`
+  : '/api/v1';
 
 const axiosInstance = axios.create({
   baseURL: `${BASE_URL}/api/v1`,
