@@ -1,9 +1,0 @@
-import{a as n,j as e}from"./index-D12u3Py-.js";function s(){const t=n();return e.jsxs("div",{className:"min-h-screen bg-[#080810] flex items-center justify-center relative overflow-hidden",children:[e.jsx("div",{className:"absolute inset-0 opacity-20",style:{backgroundImage:`
-            linear-gradient(rgba(30,30,53,0.8) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(30,30,53,0.8) 1px, transparent 1px)
-          `,backgroundSize:"40px 40px"}}),e.jsxs("div",{className:"relative z-10 text-center px-6 animate-fade-in",children:[e.jsx("div",{className:`font-['JetBrains_Mono'] text-[120px] font-bold leading-none\r
-                        text-[#00d4ff]/10 select-none mb-2`,style:{textShadow:"0 0 40px rgba(0,212,255,0.1)"},children:"404"}),e.jsx("div",{className:"font-['JetBrains_Mono'] text-xs text-[#ff3366] uppercase tracking-[0.3em] mb-4",children:"ROUTE_NOT_FOUND"}),e.jsx("h2",{className:"text-[#e8e8f0] font-sans text-lg font-semibold mb-2",children:"Page not found"}),e.jsx("p",{className:"text-[#6b6b8a] text-sm font-sans mb-8 max-w-xs mx-auto",children:"The route you navigated to doesn't exist in the super admin portal."}),e.jsxs("div",{className:"flex items-center justify-center gap-3",children:[e.jsx("button",{onClick:()=>t(-1),className:`px-5 py-2 rounded-md text-sm font-sans text-[#6b6b8a]\r
-                       hover:text-[#e8e8f0] bg-[#161625] border border-[#1e1e35]\r
-                       hover:border-[#00d4ff]/30 transition-colors`,children:"← Go Back"}),e.jsx("button",{onClick:()=>t("/dashboard"),className:`px-5 py-2 rounded-md text-sm font-['JetBrains_Mono'] font-semibold\r
-                       text-[#080810] bg-[#00d4ff]\r
-                       hover:shadow-[0_0_20px_rgba(0,212,255,0.4)] transition-all`,children:"Dashboard"})]}),e.jsx("div",{className:"mt-12 font-['JetBrains_Mono'] text-[10px] text-[#6b6b8a]/40",children:"admin.attendease.com · Super Admin Console v1.0.0"})]})]})}export{s as default};

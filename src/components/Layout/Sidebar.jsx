@@ -17,6 +17,7 @@ import {
 import { selectSidebarCollapsed, toggleSidebar } from '@store/uiSlice.js';
 import { selectImpersonation } from '@store/uiSlice.js';
 import { logout } from '@store/authSlice.js';
+import { useSuperAdminLogoutMutation } from '@store/api/authApi.js';
 import { useGetDashboardStatsQuery } from '@store/api/analyticsApi.js';
 import { useGetPlatformHealthQuery } from '@store/api/healthApi.js';
 import StatusDot from '@components/common/StatusDot.jsx';
@@ -55,6 +56,7 @@ export default function Sidebar() {
   const navigate = useNavigate();
   const collapsed = useSelector(selectSidebarCollapsed);
   const impersonation = useSelector(selectImpersonation);
+  const [logoutRequest] = useSuperAdminLogoutMutation();
 
   const { data: dashData } = useGetDashboardStatsQuery(undefined, {
     pollingInterval: 60000,
@@ -76,6 +78,7 @@ export default function Sidebar() {
   };
 
   const handleLogout = async () => {
+    await logoutRequest().unwrap().catch(() => {});
     dispatch(logout());
     navigate('/login');
   };

@@ -18,18 +18,18 @@ export const authApi = baseApi.injectEndpoints({
     }),
 
     superAdminLogout: builder.mutation({
-      query: ({ refreshToken }) => ({
+      query: () => ({
         url:    '/superadmin/auth/logout',
         method: 'POST',
-        body:   { refreshToken },
+        body:   {},
       }),
     }),
 
     refreshToken: builder.mutation({
-      query: ({ refreshToken }) => ({
+      query: () => ({
         url:    '/superadmin/auth/refresh',
         method: 'POST',
-        body:   { refreshToken },
+        body:   {},
       }),
     }),
 

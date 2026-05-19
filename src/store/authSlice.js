@@ -2,7 +2,7 @@
  * @module authSlice
  * @description Super admin authentication state.
  *              Stores user, tokens, and loading/error flags.
- *              Persists tokens to localStorage via storage utils.
+ *              Persists profile data locally; JWTs live in HTTP-only cookies.
  */
 
 import { createSlice } from '@reduxjs/toolkit';
@@ -11,8 +11,8 @@ import { STORAGE_KEYS } from '@utils/constants.js';
 
 const initialState = {
   user:            getItem(STORAGE_KEYS.USER) || null,
-  accessToken:     getItem(STORAGE_KEYS.ACCESS_TOKEN) || null,
-  isAuthenticated: !!getItem(STORAGE_KEYS.ACCESS_TOKEN),
+  accessToken:     null,
+  isAuthenticated: !!getItem(STORAGE_KEYS.USER),
   isLoading:       false,
   error:           null,
 };
@@ -33,8 +33,8 @@ const authSlice = createSlice({
       state.isLoading       = false;
       state.error           = null;
       setItem(STORAGE_KEYS.USER,          user);
-      setItem(STORAGE_KEYS.ACCESS_TOKEN,  accessToken);
-      setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
+      removeItem(STORAGE_KEYS.ACCESS_TOKEN);
+      removeItem(STORAGE_KEYS.REFRESH_TOKEN);
     },
     loginFailure(state, action) {
       state.isLoading = false;
@@ -51,8 +51,6 @@ const authSlice = createSlice({
     tokenRefreshed(state, action) {
       const { accessToken, refreshToken } = action.payload;
       state.accessToken = accessToken;
-      setItem(STORAGE_KEYS.ACCESS_TOKEN,  accessToken);
-      setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
     },
     clearError(state) {
       state.error = null;
