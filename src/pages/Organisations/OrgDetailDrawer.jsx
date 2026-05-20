@@ -24,6 +24,20 @@ import TransferOwnerModal from './TransferOwnerModal.jsx';
 import { parseError } from '@utils/errorHandler.js';
 import { useDebounce } from '@hooks/useDebounce.js';
 
+function getInviteErrorMessage(error) {
+  const code = error?.data?.error?.code || error?.response?.data?.error?.code;
+
+  if (code === 'SA_043') {
+    return 'Invite cannot be resent because this admin has already completed first login. Ask them to use Forgot Password.';
+  }
+
+  if (code === 'SA_042') {
+    return 'Invite cannot be sent because no active organisation admin was found.';
+  }
+
+  return parseError(error);
+}
+
 const EMPLOYEE_ROLE_OPTIONS = [
   { label: 'All roles', value: 'all' },
   { label: 'Admin', value: 'admin' },
@@ -115,12 +129,13 @@ export default function OrgDetailDrawer({ orgId, open, onClose }) {
     try {
       const result = await resendInvite(orgId).unwrap();
       if (result?.data?.queued || result?.queued) {
-        message.success('Admin invite queued');
+        const adminEmail = result?.data?.adminEmail || result?.adminEmail || org?.ownerEmail || 'the admin';
+        message.success(`Invite email queued for ${adminEmail}. Ask them to check Inbox, Spam, and Promotions.`, 6);
       } else {
-        message.warning(result?.data?.error || result?.error || 'Invite resend attempted');
+        message.warning(result?.data?.deliveryNote || result?.data?.error || result?.error || 'Invite email was not queued. Check SMTP/queue health.', 6);
       }
     } catch (err) {
-      message.error(parseError(err));
+      message.error(getInviteErrorMessage(err), 7);
     }
   };
 
@@ -151,7 +166,7 @@ export default function OrgDetailDrawer({ orgId, open, onClose }) {
           <DetailRow label="Name"           value={org.name}                     />
           <DetailRow label="Slug"           value={`@${org.slug}`}               />
           <DetailRow label="Owner Email"    value={org.ownerEmail}               />
-          <DetailRow label="Invite Status"  value={org.settings?.invite?.queued ? 'Queued' : org.settings?.invite?.error ? 'Failed' : 'Not sent'} />
+          <DetailRow label="Invite Status"  value={org.settings?.invite?.queued ? 'Queued for email delivery' : org.settings?.invite?.error ? `Failed: ${org.settings.invite.error}` : 'Not sent yet'} />
           <DetailRow label="Invite Last Tried" value={formatDateTime(org.settings?.invite?.lastAttemptAt)} />
           <DetailRow label="Plan"           value={<PlanBadge plan={org.plan} />} />
           <DetailRow label="Status"         value={<OrgStatusBadge status={org.status} />} />
@@ -216,7 +231,7 @@ export default function OrgDetailDrawer({ orgId, open, onClose }) {
         <div className="space-y-3">
           {[
             { label: 'Created', at: org.createdAt, detail: `Plan: ${org.plan}` },
-            org.settings?.invite && { label: 'Invite Attempt', at: org.settings.invite.lastAttemptAt, detail: org.settings.invite.error || 'Queued' },
+            org.settings?.invite && { label: 'Invite Attempt', at: org.settings.invite.lastAttemptAt, detail: org.settings.invite.error || `Queued for ${org.settings.invite.email || 'admin email delivery'}` },
             org.settings?.lastPlanChange && { label: 'Plan Changed', at: org.settings.lastPlanChange.changedAt, detail: `${org.settings.lastPlanChange.from} -> ${org.settings.lastPlanChange.to}: ${org.settings.lastPlanChange.reason}` },
             org.settings?.lastOwnerTransfer && { label: 'Owner Transferred', at: org.settings.lastOwnerTransfer.changedAt, detail: `${org.settings.lastOwnerTransfer.toEmployeeEmail}: ${org.settings.lastOwnerTransfer.reason}` },
             org.settings?.lastTrialExtension && { label: 'Trial Extended', at: org.settings.lastTrialExtension.changedAt, detail: org.settings.lastTrialExtension.reason },
