@@ -14,6 +14,7 @@ import AppLayout      from '@components/Layout/AppLayout.jsx';
 const LoginPage         = lazy(() => import('@pages/Auth/LoginPage.jsx'));
 const DashboardPage     = lazy(() => import('@pages/Dashboard/index.jsx'));
 const OrgsPage          = lazy(() => import('@pages/Organisations/index.jsx'));
+const PlansPage         = lazy(() => import('@pages/Plans/index.jsx'));
 const RevenuePage       = lazy(() => import('@pages/Revenue/index.jsx'));
 const ImpersonationPage = lazy(() => import('@pages/Impersonation/index.jsx'));
 const AuditLogsPage     = lazy(() => import('@pages/AuditLogs/index.jsx'));
@@ -55,6 +56,7 @@ export default function AppRouter() {
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard"     element={<DashboardPage />} />
           <Route path="organisations" element={<OrgsPage />} />
+          <Route path="plans"         element={<PlansPage />} />
           <Route path="revenue"       element={<RevenuePage />} />
           <Route path="impersonation" element={<ImpersonationPage />} />
           <Route path="audit-logs"    element={<AuditLogsPage />} />

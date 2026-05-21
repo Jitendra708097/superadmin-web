@@ -40,6 +40,7 @@ const PLAN_OPTIONS = [
   { label: 'All plans', value: '' },
   { label: 'Trial', value: 'trial' },
   { label: 'Standard', value: 'standard' },
+  { label: 'Enterprise', value: 'enterprise' },
 ];
 
 const CURRENCY_OPTIONS = [

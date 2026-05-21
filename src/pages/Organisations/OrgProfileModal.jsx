@@ -52,7 +52,7 @@ export default function OrgProfileModal({ open, org, onClose }) {
       onOk={() => form.submit()}
       okText="Save"
       confirmLoading={isLoading}
-      destroyOnClose
+      destroyOnHidden
       title="Edit Organisation"
     >
       <Form

@@ -43,6 +43,7 @@ const PLAN_OPTIONS = [
   { value: '', label: 'All Plans' },
   { value: PLAN_TIERS.TRIAL, label: 'Free Trial' },
   { value: PLAN_TIERS.STANDARD, label: 'Standard' },
+  { value: PLAN_TIERS.ENTERPRISE, label: 'Enterprise' },
 ];
 
 const SORT_OPTIONS = [

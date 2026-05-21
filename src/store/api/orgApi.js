@@ -38,6 +38,14 @@ export const orgApi = baseApi.injectEndpoints({
       }),
     }),
 
+    getOrgPlanHistory: builder.query({
+      query: ({ id, params }) => ({
+        url: `/superadmin/organisations/${id}/plan-history`,
+        params,
+      }),
+      providesTags: (result, error, { id }) => [{ type: 'OrgDetail', id }],
+    }),
+
     sendBillingAlert: builder.mutation({
       query: ({ id, alertType, customMessage }) => ({
         url: `/superadmin/organisations/${id}/billing/alerts`,
@@ -160,6 +168,7 @@ export const {
   useGetOrgEmployeesQuery,
   useGetOrgAttendanceSummaryQuery,
   useGetOrgBillingHistoryQuery,
+  useGetOrgPlanHistoryQuery,
   useSendBillingAlertMutation,
   useCreateOrgMutation,
   usePreviewOrgSlugQuery,

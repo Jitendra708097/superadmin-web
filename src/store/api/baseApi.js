@@ -43,6 +43,7 @@ export const baseApi = createApi({
     'Impersonation',
     'FeatureFlags',
     'Dashboard',
+    'Plans',
   ],
   endpoints: () => ({}),
 });

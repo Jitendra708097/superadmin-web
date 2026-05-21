@@ -26,7 +26,7 @@ const TIMEZONES = [
   { label: 'UTC', value: 'UTC' },
 ];
 
-const PLAN_OPTIONS = [PLAN_TIERS.TRIAL, PLAN_TIERS.STANDARD];
+const PLAN_OPTIONS = [PLAN_TIERS.TRIAL, PLAN_TIERS.STANDARD, PLAN_TIERS.ENTERPRISE];
 
 export default function CreateOrgModal({ open, onClose }) {
   const [form] = Form.useForm();
@@ -74,7 +74,7 @@ export default function CreateOrgModal({ open, onClose }) {
       footer={null}
       width={560}
       centered
-      destroyOnClose
+      destroyOnHidden
       title={null}
     >
       <div className="p-1">
@@ -225,7 +225,7 @@ export default function CreateOrgModal({ open, onClose }) {
           <div className="bg-[#00d4ff]/5 border border-[#00d4ff]/20 rounded-md px-4 py-3 mb-6">
             <p className="text-[#00d4ff] text-[11px] font-sans leading-relaxed">
               The admin will receive a welcome email with their temporary password and a link to the org admin portal.
-              Every organisation gets a {TRIAL_DAYS}-day free trial, then moves to Rs. {PLAN_PRICES.standard}/employee/month on Standard.
+              Trial starts with {TRIAL_DAYS} days free. Standard bills {PLAN_PRICES.standard}/employee/month; Enterprise stays custom until commercial terms are set.
             </p>
           </div>
 

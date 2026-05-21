@@ -12,7 +12,7 @@ import {
   DashboardOutlined, ApartmentOutlined, DollarOutlined,
   UserSwitchOutlined, AuditOutlined, MonitorOutlined,
   BarChartOutlined, ControlOutlined, LogoutOutlined,
-  MenuFoldOutlined, MenuUnfoldOutlined,
+  MenuFoldOutlined, MenuUnfoldOutlined, TagsOutlined,
 } from '@ant-design/icons';
 import { selectSidebarCollapsed, toggleSidebar } from '@store/uiSlice.js';
 import { selectImpersonation } from '@store/uiSlice.js';
@@ -25,6 +25,7 @@ import StatusDot from '@components/common/StatusDot.jsx';
 const NAV_ITEMS = [
   { path: '/dashboard', label: 'Dashboard', Icon: DashboardOutlined },
   { path: '/organisations', label: 'Organisations', Icon: ApartmentOutlined, badgeKey: 'orgCount' },
+  { path: '/plans', label: 'Plans', Icon: TagsOutlined },
   { path: '/revenue', label: 'Billing', Icon: DollarOutlined },
   { path: '/impersonation', label: 'Impersonation', Icon: UserSwitchOutlined, badgeKey: 'impersonation' },
   { path: '/audit-logs', label: 'Audit Logs', Icon: AuditOutlined },

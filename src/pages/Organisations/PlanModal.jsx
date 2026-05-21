@@ -14,7 +14,7 @@ import { parseError } from '@utils/errorHandler.js';
 import PlanBadge from '@components/common/PlanBadge.jsx';
 
 const { TextArea } = Input;
-const PLAN_OPTIONS = [PLAN_TIERS.TRIAL, PLAN_TIERS.STANDARD];
+const PLAN_OPTIONS = [PLAN_TIERS.TRIAL, PLAN_TIERS.STANDARD, PLAN_TIERS.ENTERPRISE];
 
 export default function PlanModal({ open, org, onClose }) {
   const [newPlan, setNewPlan] = useState('');
@@ -73,9 +73,9 @@ export default function PlanModal({ open, org, onClose }) {
         <div className="mb-4">
           <label className="block text-[10px] text-[#6b6b8a] uppercase tracking-widest mb-2">New Plan</label>
           <p className="text-[11px] text-[#6b6b8a] mb-3">
-            Free Trial lasts {TRIAL_DAYS} days. Standard billing is {formatINR(PLAN_PRICES.standard)}/employee/month.
+            Trial lasts {TRIAL_DAYS} days. Standard is {formatINR(PLAN_PRICES.standard)}/employee/month. Enterprise is custom.
           </p>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             {PLAN_OPTIONS.map((plan) => {
               const cfg = PLAN_COLORS[plan];
               const price = PLAN_PRICES[plan];
@@ -93,7 +93,8 @@ export default function PlanModal({ open, org, onClose }) {
                   `}
                 >
                   <div className="font-['JetBrains_Mono'] text-xs font-semibold uppercase">{PLAN_LABELS[plan]}</div>
-                  {price && <div className="text-[10px] mt-0.5 opacity-70">{formatINR(price)}/emp/mo</div>}
+                  {price ? <div className="text-[10px] mt-0.5 opacity-70">{formatINR(price)}/emp/mo</div> : null}
+                  {plan === PLAN_TIERS.ENTERPRISE && <div className="text-[10px] mt-0.5 opacity-70">Custom</div>}
                   {plan === org?.plan && <div className="text-[10px] mt-0.5 opacity-50">Current</div>}
                 </button>
               );

@@ -36,20 +36,25 @@ export const ORG_STATUS_COLORS = {
 export const PLAN_TIERS = {
   TRIAL: 'trial',
   STANDARD: 'standard',
+  ENTERPRISE: 'enterprise',
 };
 
 export const PLAN_LABELS = {
   trial: 'Free Trial',
   standard: 'Standard',
+  enterprise: 'Enterprise',
 };
 
 export const PLAN_COLORS = {
   trial: { bg: '#ffaa0020', text: '#ffaa00', border: '#ffaa0040' },
   standard: { bg: '#00d4ff20', text: '#00d4ff', border: '#00d4ff40' },
+  enterprise: { bg: '#a855f720', text: '#c084fc', border: '#a855f740' },
 };
 
 export const PLAN_PRICES = {
+  trial: 0,
   standard: 100,
+  enterprise: 0,
 };
 
 export const TRIAL_DAYS = 15;

@@ -9,6 +9,7 @@ import { Drawer, Tabs, Table, Spin, message, Input, Select } from 'antd';
 import {
   useGetOrgByIdQuery, useGetOrgEmployeesQuery,
   useGetOrgAttendanceSummaryQuery, useGetOrgBillingHistoryQuery,
+  useGetOrgPlanHistoryQuery,
   useResendOrgInviteMutation,
   useAddOrgNoteMutation,
 } from '@store/api/orgApi.js';
@@ -91,6 +92,7 @@ export default function OrgDetailDrawer({ orgId, open, onClose }) {
   const { data: empData,   isLoading: empLoading   } = useGetOrgEmployeesQuery({ id: orgId, params: employeeParams }, { skip: !orgId || activeTab !== 'employees' });
   const { data: attData,   isLoading: attLoading   } = useGetOrgAttendanceSummaryQuery(orgId, { skip: !orgId || activeTab !== 'attendance' });
   const { data: billData,  isLoading: billLoading  } = useGetOrgBillingHistoryQuery({ id: orgId, params: {} }, { skip: !orgId || activeTab !== 'billing' });
+  const { data: planHistoryData, isLoading: planHistoryLoading } = useGetOrgPlanHistoryQuery({ id: orgId, params: { limit: 25 } }, { skip: !orgId || activeTab !== 'plan-history' });
   const { data: auditData, isLoading: auditLoading } = useGetOrgAuditLogsQuery({ orgId, params: { limit: 20 } }, { skip: !orgId || activeTab !== 'audit' });
 
   const org     = orgData?.data;
@@ -100,6 +102,7 @@ export default function OrgDetailDrawer({ orgId, open, onClose }) {
   const bills   = billData?.data?.invoices || [];
   const currentEstimate = billData?.data?.currentEstimate || null;
   const audits  = auditData?.data?.logs    || [];
+  const planHistory = planHistoryData?.data?.history || [];
   const notes = org?.settings?.supportNotes || [];
 
   const empColumns = [
@@ -123,6 +126,15 @@ export default function OrgDetailDrawer({ orgId, open, onClose }) {
       <span style={{ color: AUDIT_ACTION_COLORS[v] || '#6b6b8a' }} className="text-[10px] font-['JetBrains_Mono']">{v}</span>
     )},
     { title: 'By', dataIndex: 'performedByName', render: (v) => <span className="text-xs text-[#6b6b8a]">{v || 'System'}</span> },
+  ];
+
+  const planHistoryColumns = [
+    { title: 'Changed', dataIndex: 'createdAt', width: 140, render: (v) => <MonoValue value={formatDateTime(v)} color="muted" size="xs" /> },
+    { title: 'From', dataIndex: 'oldPlan', width: 110, render: (v) => v ? <PlanBadge plan={v} /> : <span className="text-xs text-[#6b6b8a]">-</span> },
+    { title: 'To', dataIndex: 'newPlan', width: 110, render: (v) => <PlanBadge plan={v} /> },
+    { title: 'By', dataIndex: 'actorName', width: 130, render: (v, row) => <span className="text-xs text-[#e8e8f0]">{v || row.actorEmail || 'System'}</span> },
+    { title: 'Effective', dataIndex: 'effectiveAt', width: 140, render: (v) => <MonoValue value={formatDateTime(v)} color="muted" size="xs" /> },
+    { title: 'Reason', dataIndex: 'reason', render: (v) => <span className="text-xs text-[#6b6b8a]">{v || '-'}</span> },
   ];
 
   const handleResendInvite = async () => {
@@ -250,6 +262,30 @@ export default function OrgDetailDrawer({ orgId, open, onClose }) {
           ))}
         </div>
       ) : null,
+    },
+    {
+      key: 'plan-history',
+      label: 'Plan History',
+      children: (
+        <Table
+          columns={planHistoryColumns}
+          dataSource={planHistory}
+          rowKey="id"
+          loading={planHistoryLoading}
+          size="small"
+          pagination={{ pageSize: 8, size: 'small' }}
+          expandable={{
+            expandedRowRender: (row) => (
+              <div className="text-xs text-[#6b6b8a] space-y-1">
+                <div>Snapshot: {row.metadata?.newSnapshot?.name || row.newPlan}</div>
+                <div>Billing: {row.metadata?.newSnapshot?.billingType || '-'}</div>
+                <div>Employee limit: {row.metadata?.newSnapshot?.employeeLimit ?? 'Unlimited'}</div>
+                <div>Branch limit: {row.metadata?.newSnapshot?.branchLimit ?? 'Unlimited'}</div>
+              </div>
+            ),
+          }}
+        />
+      ),
     },
     {
       key: 'notes',

@@ -18,6 +18,7 @@ import './api/auditApi.js';
 import './api/billingApi.js';
 import './api/impersonateApi.js';
 import './api/featureFlagApi.js';
+import './api/planApi.js';
 
 export const store = configureStore({
   reducer: {
