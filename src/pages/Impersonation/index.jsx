@@ -46,6 +46,34 @@ import ConfirmModal from '@components/common/ConfirmModal.jsx';
 const { TextArea } = Input;
 const { RangePicker } = DatePicker;
 
+function mapActiveSession(serverSession) {
+  if (!serverSession) return null;
+
+  return {
+    sessionId: serverSession.id,
+    orgId: serverSession.orgId,
+    orgName: serverSession.orgName,
+    adminName: serverSession.adminName,
+    startedAt: serverSession.startedAt,
+    expiresAt: serverSession.expiresAt,
+    lastSeenAt: serverSession.lastSeenAt,
+  };
+}
+
+function isSameActiveSession(left, right) {
+  if (!left || !right) return left === right;
+
+  return (
+    left.sessionId === right.sessionId &&
+    left.orgId === right.orgId &&
+    left.orgName === right.orgName &&
+    left.adminName === right.adminName &&
+    left.startedAt === right.startedAt &&
+    left.expiresAt === right.expiresAt &&
+    left.lastSeenAt === right.lastSeenAt
+  );
+}
+
 /* ── Active session timer ─────────────────────────────────────── */
 function useElapsedTimer(startedAt) {
   const [elapsed, setElapsed] = useState('00:00:00');
@@ -167,15 +195,10 @@ export default function ImpersonationPage() {
   useEffect(() => {
     const serverSession = activeSessionData?.data;
     if (serverSession) {
-      dispatch(setImpersonation({
-        sessionId:   serverSession.id,
-        orgId:       serverSession.orgId,
-        orgName:     serverSession.orgName,
-        adminName:   serverSession.adminName,
-        startedAt:   serverSession.startedAt,
-        expiresAt:   serverSession.expiresAt,
-        lastSeenAt:  serverSession.lastSeenAt,
-      }));
+      const nextSession = mapActiveSession(serverSession);
+      if (!isSameActiveSession(activeSession, nextSession)) {
+        dispatch(setImpersonation(nextSession));
+      }
     } else if (activeSessionData && activeSession) {
       dispatch(clearImpersonation());
     }
