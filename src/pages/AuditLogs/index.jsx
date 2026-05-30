@@ -6,7 +6,8 @@
 
 import { useState } from 'react';
 import { useLocation } from 'react-router';
-import { Table, Select, DatePicker, Tooltip, message } from 'antd';
+import { Drawer, Table, Select, DatePicker, Tooltip, message } from 'antd';
+import dayjs from 'dayjs';
 import {
   AlertOutlined,
   AuditOutlined,
@@ -20,7 +21,12 @@ import {
   WalletOutlined,
 } from '@ant-design/icons';
 import axiosInstance from '@api/axiosInstance.js';
-import { useGetAuditLogSummaryQuery, useGetAuditLogsQuery } from '@store/api/auditApi.js';
+import {
+  useGetAuditLogByIdQuery,
+  useGetAuditLogSummaryQuery,
+  useGetAuditLogsQuery,
+} from '@store/api/auditApi.js';
+import { useSearchOrgsQuery } from '@store/api/orgApi.js';
 import { useDebounce } from '@hooks/useDebounce.js';
 import { AUDIT_ACTION_COLORS, AUDIT_ACTIONS, PAGE_SIZE } from '@utils/constants.js';
 import { formatDateTime, formatTimeAgo } from '@utils/formatters.js';
@@ -29,6 +35,21 @@ import MonoValue from '@components/common/MonoValue.jsx';
 
 const { RangePicker } = DatePicker;
 const SAVED_AUDIT_VIEWS_KEY = 'ae_sa_audit_saved_views';
+const AUDIT_EXPORT_WARN_THRESHOLD = 10000;
+
+const ENTITY_TYPE_OPTIONS = [
+  { value: 'attendance', label: 'Attendance' },
+  { value: 'attendance_session', label: 'Attendance Session' },
+  { value: 'billing', label: 'Billing' },
+  { value: 'employee', label: 'Employee' },
+  { value: 'feature_flag', label: 'Feature Flag' },
+  { value: 'feature_flag_override', label: 'Flag Override' },
+  { value: 'impersonation_session', label: 'Impersonation Session' },
+  { value: 'organisation', label: 'Organisation' },
+  { value: 'plan', label: 'Plan' },
+  { value: 'queue', label: 'Queue' },
+  { value: 'superadmin', label: 'Superadmin' },
+];
 
 function getFilenameFromDisposition(headerValue, fallback) {
   const match = /filename="?([^"]+)"?/i.exec(headerValue || '');
@@ -55,13 +76,17 @@ export default function AuditLogsPage() {
   const preOrgId = location.state?.orgId || '';
   const preOrgName = location.state?.orgName || '';
 
-  const [orgSearch, setOrgSearch] = useState(preOrgId);
+  const [orgSearch, setOrgSearch] = useState(preOrgName || '');
+  const [selectedOrg, setSelectedOrg] = useState(
+    preOrgId ? { id: preOrgId, name: preOrgName || preOrgId } : null
+  );
   const [actionType, setActionType] = useState('');
   const [entityType, setEntityType] = useState('');
   const [entityId, setEntityId] = useState('');
   const [dateRange, setDateRange] = useState(null);
   const [page, setPage] = useState(1);
   const [expanded, setExpanded] = useState({});
+  const [detailLogId, setDetailLogId] = useState(null);
   const [exporting, setExporting] = useState(false);
   const [savedViews, setSavedViews] = useState(() => {
     try {
@@ -71,13 +96,21 @@ export default function AuditLogsPage() {
     }
   });
 
-  const debouncedOrg = useDebounce(orgSearch, 300);
-  const hasActiveFilters = Boolean(orgSearch || actionType || entityType || entityId || (dateRange && dateRange.length));
+  const debouncedOrgSearch = useDebounce(orgSearch, 300);
+  const hasActiveFilters = Boolean(selectedOrg || orgSearch || actionType || entityType || entityId || (dateRange && dateRange.length));
+
+  const { data: orgSearchData, isFetching: orgSearching } = useSearchOrgsQuery(
+    { q: debouncedOrgSearch },
+    { skip: debouncedOrgSearch.length < 2 || !!selectedOrg }
+  );
+
+  const orgResults = orgSearchData?.data?.orgs || [];
+  const selectedOrgId = selectedOrg?.id || '';
 
   const auditQueryParams = {
     page,
     limit: PAGE_SIZE,
-    orgId: debouncedOrg || undefined,
+    orgId: selectedOrgId || undefined,
     action: actionType || undefined,
     entityType: entityType || undefined,
     entityId: entityId || undefined,
@@ -86,7 +119,7 @@ export default function AuditLogsPage() {
   };
 
   const summaryQueryParams = {
-    orgId: debouncedOrg || undefined,
+    orgId: selectedOrgId || undefined,
     action: actionType || undefined,
     entityType: entityType || undefined,
     entityId: entityId || undefined,
@@ -96,6 +129,9 @@ export default function AuditLogsPage() {
 
   const { data, isLoading, isFetching } = useGetAuditLogsQuery(auditQueryParams);
   const { data: summaryData, isFetching: isSummaryFetching } = useGetAuditLogSummaryQuery(summaryQueryParams);
+  const { data: detailData, isFetching: detailLoading } = useGetAuditLogByIdQuery(detailLogId, {
+    skip: !detailLogId,
+  });
 
   const summary = summaryData?.data || {};
   const auditStats = [
@@ -145,6 +181,7 @@ export default function AuditLogsPage() {
 
   const logs = data?.data?.logs || [];
   const total = data?.data?.total || 0;
+  const detailLog = detailData?.data || null;
 
   const toggleExpand = (id) => {
     setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -152,6 +189,7 @@ export default function AuditLogsPage() {
 
   const clearFilters = () => {
     setOrgSearch('');
+    setSelectedOrg(null);
     setActionType('');
     setEntityType('');
     setEntityId('');
@@ -169,7 +207,21 @@ export default function AuditLogsPage() {
     if (!name?.trim()) return;
     const next = [
       ...savedViews.filter((view) => view.name !== name.trim()),
-      { name: name.trim(), orgSearch, actionType, entityType, entityId },
+      {
+        name: name.trim(),
+        orgId: selectedOrg?.id || '',
+        orgName: selectedOrg?.name || '',
+        orgSearch,
+        actionType,
+        entityType,
+        entityId,
+        dateRange: dateRange
+          ? [
+              dateRange[0]?.toISOString(),
+              dateRange[1]?.toISOString(),
+            ]
+          : null,
+      },
     ].slice(-8);
     persistSavedViews(next);
     message.success('Audit view saved');
@@ -178,25 +230,39 @@ export default function AuditLogsPage() {
   const applySavedView = (name) => {
     const view = savedViews.find((item) => item.name === name);
     if (!view) return;
-    setOrgSearch(view.orgSearch || '');
+    setSelectedOrg(view.orgId ? { id: view.orgId, name: view.orgName || view.orgId } : null);
+    setOrgSearch(view.orgName || view.orgSearch || '');
     setActionType(view.actionType || '');
     setEntityType(view.entityType || '');
     setEntityId(view.entityId || '');
+    setDateRange(
+      Array.isArray(view.dateRange) && view.dateRange[0] && view.dateRange[1]
+        ? [dayjs(view.dateRange[0]), dayjs(view.dateRange[1])]
+        : null
+    );
     setPage(1);
   };
 
   const handleExport = async (format = 'xlsx') => {
+    if (total > AUDIT_EXPORT_WARN_THRESHOLD) {
+      const confirmed = window.confirm(
+        `This export has ${formatCount(total)} rows. It may take a while. Continue?`
+      );
+      if (!confirmed) return;
+    }
+
     try {
       setExporting(true);
       const response = await axiosInstance.get('/superadmin/audit-logs/export', {
         params: {
-          orgId: debouncedOrg || undefined,
+          orgId: selectedOrgId || undefined,
           action: actionType || undefined,
           entityType: entityType || undefined,
           entityId: entityId || undefined,
           startDate: dateRange?.[0]?.toISOString(),
           endDate: dateRange?.[1]?.toISOString(),
           format,
+          allowLargeExport: total > AUDIT_EXPORT_WARN_THRESHOLD ? 'true' : undefined,
         },
         responseType: 'blob',
       });
@@ -276,14 +342,26 @@ export default function AuditLogsPage() {
     {
       title: '...',
       key: 'expand',
-      width: 40,
+      width: 72,
       render: (_, r) => (
-        <button
-          onClick={() => toggleExpand(r.id)}
-          className="text-[#6b6b8a] hover:text-[#00d4ff] transition-colors"
-        >
-          <ExpandAltOutlined className="text-xs" />
-        </button>
+        <div className="flex items-center gap-2">
+          <Tooltip title="Expand metadata">
+            <button
+              onClick={() => toggleExpand(r.id)}
+              className="text-[#6b6b8a] hover:text-[#00d4ff] transition-colors"
+            >
+              <ExpandAltOutlined className="text-xs" />
+            </button>
+          </Tooltip>
+          <Tooltip title="View details">
+            <button
+              onClick={() => setDetailLogId(r.id)}
+              className="text-[#6b6b8a] hover:text-[#00d4ff] transition-colors"
+            >
+              <AuditOutlined className="text-xs" />
+            </button>
+          </Tooltip>
+        </div>
       ),
     },
   ];
@@ -358,15 +436,64 @@ export default function AuditLogsPage() {
       </div>
 
       <div className="flex items-center gap-3 mb-4 flex-wrap">
-        <input
-          value={orgSearch}
-          onChange={(e) => {
-            setOrgSearch(e.target.value);
-            setPage(1);
-          }}
-          placeholder="Filter by Org ID..."
-          className="px-3 py-2 bg-[#161625] border border-[#1e1e35] rounded-md text-[#e8e8f0] text-xs font-sans placeholder-[#6b6b8a] outline-none focus:border-[#00d4ff]/50 transition-colors w-52"
-        />
+        <div className="relative w-64">
+          {selectedOrg ? (
+            <div className="flex items-center justify-between gap-2 px-3 py-2 bg-[#161625] border border-[#1e1e35] rounded-md">
+              <div className="min-w-0">
+                <div className="text-[#e8e8f0] text-xs truncate">{selectedOrg.name}</div>
+                <MonoValue value={selectedOrg.id} color="muted" size="xs" />
+              </div>
+              <button
+                onClick={() => {
+                  setSelectedOrg(null);
+                  setOrgSearch('');
+                  setPage(1);
+                }}
+                className="text-[#6b6b8a] hover:text-[#ff3366] text-xs transition-colors"
+              >
+                x
+              </button>
+            </div>
+          ) : (
+            <>
+              <input
+                value={orgSearch}
+                onChange={(e) => {
+                  setOrgSearch(e.target.value);
+                  setPage(1);
+                }}
+                placeholder="Search organisation..."
+                className="w-full px-3 py-2 bg-[#161625] border border-[#1e1e35] rounded-md text-[#e8e8f0] text-xs font-sans placeholder-[#6b6b8a] outline-none focus:border-[#00d4ff]/50 transition-colors"
+              />
+              {orgResults.length > 0 && (
+                <div className="absolute z-20 top-full mt-1 w-full bg-[#161625] border border-[#1e1e35] rounded-md shadow-xl max-h-56 overflow-y-auto">
+                  {orgResults.map((org) => (
+                    <button
+                      key={org.id}
+                      onClick={() => {
+                        setSelectedOrg(org);
+                        setOrgSearch(org.name);
+                        setPage(1);
+                      }}
+                      className="w-full text-left px-3 py-2.5 hover:bg-[#1e1e35] transition-colors"
+                    >
+                      <div className="text-[#e8e8f0] text-xs truncate">{org.name}</div>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        {org.slug && <MonoValue value={`@${org.slug}`} color="muted" size="xs" />}
+                        <MonoValue value={`${org.employeeCount || 0} emp`} color="muted" size="xs" />
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {orgSearching && debouncedOrgSearch.length >= 2 && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <div className="w-3 h-3 border border-[#00d4ff] border-t-transparent rounded-full animate-spin" />
+                </div>
+              )}
+            </>
+          )}
+        </div>
         <Select
           value={actionType || undefined}
           placeholder="All Actions"
@@ -388,12 +515,7 @@ export default function AuditLogsPage() {
             setPage(1);
           }}
           style={{ width: 160 }}
-          options={[
-            { value: 'organisation', label: 'Organisation' },
-            { value: 'feature_flag', label: 'Feature Flag' },
-            { value: 'feature_flag_override', label: 'Flag Override' },
-            { value: 'queue', label: 'Queue' },
-          ]}
+          options={ENTITY_TYPE_OPTIONS}
         />
         <input
           value={entityId}
@@ -471,6 +593,76 @@ export default function AuditLogsPage() {
           }}
         />
       </div>
+
+      <Drawer
+        title="Audit Log Detail"
+        open={!!detailLogId}
+        onClose={() => setDetailLogId(null)}
+        width={720}
+        styles={{
+          body: { background: '#080810' },
+          header: { background: '#0f0f1a', borderBottom: '1px solid #1e1e35' },
+        }}
+      >
+        {detailLoading ? (
+          <div className="text-[#6b6b8a] text-sm">Loading audit log...</div>
+        ) : detailLog ? (
+          <div className="space-y-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {[
+                ['Timestamp', formatDateTime(detailLog.createdAt)],
+                ['Action', detailLog.action || '-'],
+                ['Organisation', detailLog.orgName || 'System'],
+                ['Performed By', detailLog.performedByName || 'System'],
+                ['Performer Email', detailLog.performedByEmail || '-'],
+                ['Actor Role', detailLog.metadata?.actorRole || '-'],
+                ['Target Type', detailLog.targetEntityType || detailLog.metadata?.entityType || '-'],
+                ['Target ID', detailLog.targetEntityId || detailLog.metadata?.entityId || '-'],
+                ['IP Address', detailLog.ipAddress || '-'],
+                ['Impersonation Session', detailLog.impersonationSessionId || '-'],
+              ].map(([label, value]) => (
+                <div key={label} className="bg-[#0f0f1a] border border-[#1e1e35] rounded-md p-3">
+                  <div className="text-[#6b6b8a] text-[9px] uppercase tracking-widest mb-1">
+                    {label}
+                  </div>
+                  <div className="text-[#e8e8f0] text-xs break-words">
+                    {value}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="bg-[#0f0f1a] border border-[#1e1e35] rounded-md p-3">
+              <div className="text-[#6b6b8a] text-[9px] uppercase tracking-widest mb-2">
+                Old Value
+              </div>
+              <pre className="whitespace-pre-wrap break-all text-xs text-[#ffaa00] font-['JetBrains_Mono']">
+                {JSON.stringify(detailLog.metadata?.oldValue || null, null, 2)}
+              </pre>
+            </div>
+
+            <div className="bg-[#0f0f1a] border border-[#1e1e35] rounded-md p-3">
+              <div className="text-[#6b6b8a] text-[9px] uppercase tracking-widest mb-2">
+                New Value
+              </div>
+              <pre className="whitespace-pre-wrap break-all text-xs text-[#00d4ff] font-['JetBrains_Mono']">
+                {JSON.stringify(detailLog.metadata?.newValue || null, null, 2)}
+              </pre>
+            </div>
+
+            <div className="bg-[#0f0f1a] border border-[#1e1e35] rounded-md p-3">
+              <div className="text-[#6b6b8a] text-[9px] uppercase tracking-widest mb-2">
+                User Agent
+              </div>
+              <p className="text-[#6b6b8a] text-xs break-words">
+                {detailLog.metadata?.userAgent || '-'}
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="text-[#6b6b8a] text-sm">Audit log not found.</div>
+        )}
+      </Drawer>
     </div>
   );
 }

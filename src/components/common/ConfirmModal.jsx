@@ -46,6 +46,7 @@ export default function ConfirmModal({
       width={420}
       centered
       closable={false}
+      zIndex={3000}
     >
       <div className="p-2">
         <div className="flex gap-4 mb-5">
