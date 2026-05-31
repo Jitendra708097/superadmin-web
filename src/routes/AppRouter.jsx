@@ -18,6 +18,7 @@ const PlansPage         = lazy(() => import('@pages/Plans/index.jsx'));
 const RevenuePage       = lazy(() => import('@pages/Revenue/index.jsx'));
 const ImpersonationPage = lazy(() => import('@pages/Impersonation/index.jsx'));
 const AuditLogsPage     = lazy(() => import('@pages/AuditLogs/index.jsx'));
+const FeedbackPage      = lazy(() => import('@pages/Feedback/index.jsx'));
 const HealthPage        = lazy(() => import('@pages/PlatformHealth/index.jsx'));
 const AnalyticsPage     = lazy(() => import('@pages/Analytics/index.jsx'));
 const FeatureFlagsPage  = lazy(() => import('@pages/FeatureFlags/index.jsx'));
@@ -60,6 +61,7 @@ export default function AppRouter() {
           <Route path="revenue"       element={<RevenuePage />} />
           <Route path="impersonation" element={<ImpersonationPage />} />
           <Route path="audit-logs"    element={<AuditLogsPage />} />
+          <Route path="feedback"      element={<FeedbackPage />} />
           <Route path="health"        element={<HealthPage />} />
           <Route path="analytics"     element={<AnalyticsPage />} />
           <Route path="feature-flags" element={<FeatureFlagsPage />} />

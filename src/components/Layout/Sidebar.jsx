@@ -13,6 +13,7 @@ import {
   UserSwitchOutlined, AuditOutlined, MonitorOutlined,
   BarChartOutlined, ControlOutlined, LogoutOutlined,
   MenuFoldOutlined, MenuUnfoldOutlined, TagsOutlined,
+  MessageOutlined,
 } from '@ant-design/icons';
 import { selectSidebarCollapsed, toggleSidebar } from '@store/uiSlice.js';
 import { selectImpersonation } from '@store/uiSlice.js';
@@ -29,6 +30,7 @@ const NAV_ITEMS = [
   { path: '/revenue', label: 'Billing', Icon: DollarOutlined },
   { path: '/impersonation', label: 'Impersonation', Icon: UserSwitchOutlined, badgeKey: 'impersonation' },
   { path: '/audit-logs', label: 'Audit Logs', Icon: AuditOutlined },
+  { path: '/feedback', label: 'Feedback', Icon: MessageOutlined },
   { path: '/health', label: 'Platform Health', Icon: MonitorOutlined, badgeKey: 'healthIssues' },
   { path: '/analytics', label: 'Analytics', Icon: BarChartOutlined },
   { path: '/feature-flags', label: 'Feature Flags', Icon: ControlOutlined },

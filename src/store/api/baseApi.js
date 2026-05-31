@@ -44,6 +44,7 @@ export const baseApi = createApi({
     'FeatureFlags',
     'Dashboard',
     'Plans',
+    'Feedback',
   ],
   endpoints: () => ({}),
 });
