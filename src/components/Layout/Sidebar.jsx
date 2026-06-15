@@ -13,7 +13,7 @@ import {
   UserSwitchOutlined, AuditOutlined, MonitorOutlined,
   BarChartOutlined, ControlOutlined, LogoutOutlined,
   MenuFoldOutlined, MenuUnfoldOutlined, TagsOutlined,
-  MessageOutlined,
+  MessageOutlined, LoadingOutlined,
 } from '@ant-design/icons';
 import { selectSidebarCollapsed, toggleSidebar } from '@store/uiSlice.js';
 import { selectImpersonation } from '@store/uiSlice.js';
@@ -59,7 +59,7 @@ export default function Sidebar() {
   const navigate = useNavigate();
   const collapsed = useSelector(selectSidebarCollapsed);
   const impersonation = useSelector(selectImpersonation);
-  const [logoutRequest] = useSuperAdminLogoutMutation();
+  const [logoutRequest, { isLoading: isLoggingOut }] = useSuperAdminLogoutMutation();
 
   const { data: dashData } = useGetDashboardStatsQuery(undefined, {
     pollingInterval: 60000,
@@ -81,6 +81,10 @@ export default function Sidebar() {
   };
 
   const handleLogout = async () => {
+    if (isLoggingOut) {
+      return;
+    }
+
     await logoutRequest().unwrap().catch(() => {});
     dispatch(logout());
     navigate('/login');
@@ -159,13 +163,15 @@ export default function Sidebar() {
 
         {!collapsed && <div className="text-[10px] font-['JetBrains_Mono'] text-[#6b6b8a] px-1 mb-2">v1.0.0</div>}
 
-        <Tooltip title={collapsed ? 'Logout' : ''} placement="right">
+        <Tooltip title={collapsed ? (isLoggingOut ? 'Logging out...' : 'Logout') : ''} placement="right">
           <button
             onClick={handleLogout}
-            className={`w-full flex items-center rounded-md px-2.5 py-2 text-[#6b6b8a] hover:text-[#ff3366] hover:bg-[#ff3366]/10 transition-all duration-150 font-sans text-[13px] ${collapsed ? 'justify-center' : 'gap-3'}`}
+            disabled={isLoggingOut}
+            aria-busy={isLoggingOut}
+            className={`w-full flex items-center rounded-md px-2.5 py-2 text-[#6b6b8a] hover:text-[#ff3366] hover:bg-[#ff3366]/10 transition-all duration-150 font-sans text-[13px] disabled:cursor-wait disabled:opacity-70 ${isLoggingOut ? 'bg-[#ff3366]/10 text-[#ff3366]' : ''} ${collapsed ? 'justify-center' : 'gap-3'}`}
           >
-            <SidebarIcon Icon={LogoutOutlined} tone="danger" />
-            {!collapsed && <span>Logout</span>}
+            <SidebarIcon Icon={isLoggingOut ? LoadingOutlined : LogoutOutlined} tone="danger" />
+            {!collapsed && <span>{isLoggingOut ? 'Logging out...' : 'Logout'}</span>}
           </button>
         </Tooltip>
 
